@@ -1,0 +1,9 @@
+{
+    "makefile.extensionOutputFolder": "./.vscode",
+    "files.associations": {
+        "*.rmd": "markdown",
+        "sshellviewmodel.h": "c",
+        "string.h": "c",
+        "stdio.h": "c"
+    }
+}
