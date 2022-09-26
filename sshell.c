@@ -123,17 +123,6 @@ void ExecutePipelineCommands(SshellInput *shell){
 }
 
 
-void ErrorHandler(int statusCode){
-        // 1 for too many argument
-        // 2 for missing command
-        switch(statusCode){
-                case 1:
-
-                        break;
-                default:
-                        break;
-        }
-}
 
 void RedirectionOutput(CommandAndArgument *singleCommand){
 
@@ -306,7 +295,7 @@ void ViewStart(){
 
                 userInput[strcspn(userInput, "\n")] = 0;
                 if(ExitHandler(userInput) == 1){
-                        break;
+                        exit(0);
                 }
                 SplitInput(userInput, shell.listOfCommand, &shell.numOfCommand);
                 
