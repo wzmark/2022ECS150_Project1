@@ -1,8 +1,10 @@
-main: array.o
-		cc -o main array.o
+all: sshell
 
-array.o: array.c array.h
-		cc -c array.c
+sshell: sshell.o
+	gcc -Wall -Wextra -Werror -o sshell sshell.o
 
-clean: 
-		rm main array.o
+sshell.o: sshell.c sshell.h sshellModel.h
+	gcc -Wall -Wextra -Werror -c -o sshell.o sshell.c
+
+clean:
+	rm -f shell sshell.o

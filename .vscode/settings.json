@@ -4,6 +4,7 @@
         "*.rmd": "markdown",
         "sshellviewmodel.h": "c",
         "string.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "types.h": "c"
     }
 }
