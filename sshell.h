@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <fcntl.h>
+#include <sys/wait.h>
 
 
 

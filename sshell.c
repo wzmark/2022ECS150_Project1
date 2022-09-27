@@ -1,35 +1,51 @@
 #include "sshell.h"
 
+//printf any error message, using errorType to determine the error type
 int errorHandler(int errorType){
         switch(errorType){
                 case 1:
                         //can not open output file
+                        fprintf(stderr, 
+				"Error: cannot open output file\n");
                         break;
                 case 2:
                         //can not cd
+                        fprintf(stderr, 
+				"Error: cannot cd file\n");
                         break;
                 case 3:
+                        fprintf(stderr, 
+				"Error: cannot open name of file\n");
                         //invalid name
                         break;
                 case 4:
+                        fprintf(stderr, 
+				"Error: missing command\n");
                         //missing command
                         break;
                 case 5:
+                        fprintf(stderr, 
+				"Error: enter too much argument\n");
                         //too much argument
                         break;
                 case 6:
+                        fprintf(stderr, 
+				"Error: missing output file\n");
                         //missing output file
                         break;
                 case 7:
                         //mislocated output redirection
                         break;
                 default:
+                        fprintf(stderr, 
+				"Error: unknown error\n");
                         break;
                         
         }
         return 0;
 }
 
+//detect whether user type in exit, if detect, print end message and return 1
 int ExitHandler(char* userInput){
         if(strstr(userInput, "exit") != NULL){
                 fprintf(stderr,"Bye...\n+ completed '%s' [0]\n", userInput);
@@ -40,25 +56,9 @@ int ExitHandler(char* userInput){
         }
 }
 
+
 int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
-        /*
-        pid_t pid = fork();
         
-        int ret;
-        if(pid == 0){
-                //printf("test \n");
-                RedirectionOutput(singleCommand);
-                ret = execvp(singleCommand->command, singleCommand->argument);
-                
-        }else if(pid > 0){
-                int status;
-                waitpid(pid, &status, 0);
-                
-        }else { 
-                perror("fork");
-                exit(1); 
-        }
-        */
         RedirectionOutput(singleCommand);
         int ret = execvp(singleCommand->command, singleCommand->argument);
         return ret;
@@ -160,6 +160,8 @@ void RedirectionOutput(CommandAndArgument *singleCommand){
 }
 
 //if function find these command "pwd", "cd" return 1
+//this function run the build in command, like cd pwd
+//return 0 if do not execute any command else return 1
 int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
         //RedirectionOutput(singleCommand);
         char *buffer = (char*)malloc(PATH_MAX_LEN);
@@ -174,13 +176,16 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
                 }
                 
                 if(chdir(singleCommand->argument[1]) < 0){
-                        fprintf(stderr, "Error: cannot cd into directory\n");
+                        //can not cd file
+                        ErrorHandler(2);
                 }
                 return 1;
         }
         return 0;
 }
 
+//this function set value to argument in command
+//find and retrieve value from contentOfVariable
 int SetVariable(VariableDictionary *listOfVariable, SshellInput *shell){
         
         for(int i = 0; i < shell->numOfCommand; i++){
@@ -258,11 +263,13 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
                                 strcpy(newArgument, tempArgument);
                                 
                         }else if(i == singleCommand->numOfArgument){
-                                singleCommand->argument[i] = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+                                singleCommand->argument[i] = (char*)malloc(
+                                        ARGUMENT_MAX_LEN  * sizeof(char));
                                 strcpy(singleCommand->argument[i], newArgument);
                                 
                         }else{
-                                singleCommand->argument[i] = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+                                singleCommand->argument[i] = (char*)malloc(
+                                        ARGUMENT_MAX_LEN  * sizeof(char));
                                 singleCommand->argument[i] = NULL;
                         }  
                 }
