@@ -14,7 +14,7 @@
 
 void ViewStart();
 int ExitHandler(char* userInput);
-void ErrorHandler(int statusCode);
+int ErrorHandler(int statusCode);
 void ExecuteCommand(CommandAndArgument *singleCommand);
 void ExecutePipelineCommands(SshellInput *shell);
 int ExecuteDefinedCommand(CommandAndArgument *singleCommand);
