@@ -1,7 +1,7 @@
 #include "sshell.h"
 
 //printf any error message, using errorType to determine the error type
-int errorHandler(int errorType){
+int ErrorHandler(int errorType){
         switch(errorType){
                 case 1:
                         //can not open output file
