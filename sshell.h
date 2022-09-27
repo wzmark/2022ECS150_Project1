@@ -18,7 +18,7 @@ void ErrorHandler(int statusCode);
 void ExecuteCommand(CommandAndArgument *singleCommand);
 void ExecutePipelineCommands(SshellInput *shell);
 int ExecuteDefinedCommand(CommandAndArgument *singleCommand);
-void SplitInput(char* userInput, CommandAndArgument *listOfCommand, int *numOfCommand);
+void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, int *numOfCommand);
 int RedirectionCommandHandler(char *splitString);
 void RedirectionOutput(CommandAndArgument *singleCommand);
 int ExecuteBuildInCommand(CommandAndArgument *singleCommand);
