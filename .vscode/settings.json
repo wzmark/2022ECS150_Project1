@@ -5,6 +5,8 @@
         "sshellviewmodel.h": "c",
         "string.h": "c",
         "stdio.h": "c",
-        "types.h": "c"
+        "types.h": "c",
+        "stddef.h": "c",
+        "fcntl.h": "c"
     }
 }

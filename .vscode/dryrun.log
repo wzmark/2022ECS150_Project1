@@ -1,5 +1,6 @@
-make --dry-run --keep-going --print-directory
+make --dry-run --always-make --keep-going --print-directory
 make: Entering directory `/Users/wangzhe/Documents/2022Fall/ECS150/Project1'
-make: Nothing to be done for `all'.
+gcc -Wall -Wextra -Werror -g -c -o sshell.o sshell.c
+gcc -Wall -Wextra -Werror -g -o sshell sshell.o
 make: Leaving directory `/Users/wangzhe/Documents/2022Fall/ECS150/Project1'
  

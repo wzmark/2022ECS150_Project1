@@ -69,44 +69,60 @@ int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
 
 
 void ExecutePipelineCommands(SshellInput *shell){
+
+
+
+        
         pid_t pid;
         
-        int fd[COMMAND_MAX_NUM][2];
+        //int fd[COMMAND_MAX_NUM * 2];
         
-        //fd = (int*)malloc((shell->numOfCommand - 1) * sizeof(int) * 2);
-        
-
-        for(int i = 0; i < shell->numOfCommand - 1; i++){
-                if(pipe(fd[i]) < 0){
-                        exit(1);
+        int fd[2 * COMMAND_MAX_NUM];
+        for(int i = 0; i < shell->numOfCommand; i++){
+                if(pipe(&fd[i])<0){
+                        exit(0);
                 }
         }
-
-
+        printf("%d %d", fd[0], fd[1]);
         for(int i = 0; i < shell->numOfCommand; i++){
                 //pipe(fd);
+                printf("loop %d\n", i);
                 pid = fork();
                 if(pid == 0){
-                        //printf("test \n");
-                        //int temp = *fd[(i - 1) * 2];
-                        //printf("%d + %d", temp, fd[(i - 1) * 2]);
-                        
-                        if(i != 0){
-                                dup2(*fd[(i - 1) * 2], STDIN_FILENO);
-                        }else if(i != shell->numOfCommand - 1){
-                                dup2(*fd[i * 2 + 1],STDOUT_FILENO);
-                        }
-                        for(int j = 0; j < COMMAND_MAX_NUM * 2; j++){
-                                close(*fd[i]);
+                        // has previous
+                        if(i - 1 >= 0){
+                                printf("%d\n", (i * 2) - 1);
+                                close(fd[i * 2 - 1]);
+                                dup2(fd[(i - 1) * 2], STDIN_FILENO);
+                                
+                                close(fd[(i - 1) * 2]);
+                                
                         }
 
-                        ExecuteCommand(&shell->listOfCommand[i]);
+                        if(i + 1 < shell->numOfCommand){
+                               
+                                
+                                close(fd[i * 2]);
+                                printf("%d\n", fd[i * 2]);
+                                printf("%d\n", fd[(i * 2) + 1]);
+                                dup2(fd[(i * 2) + 1], STDOUT_FILENO);
+                                
+                                
+                                close(fd[(i * 2) + 1]);
+                                
+                        }
+
                         
+                        
+
+                        ExecuteCommand(&shell->listOfCommand[i]);
+                        //printf("%d %d %d %d\n", fd[0], fd[1], fd[2], fd[3]);
+                        exit(3);
                 }
                 else if(pid > 0){
                         int status;
-                        waitpid(pid, &status, 0);
-                        
+                        wait(&status);
+                        //printf("%d\n", fd[(i - 1) * 2]);
                         
                 }else { 
                         perror("fork");
@@ -114,10 +130,7 @@ void ExecutePipelineCommands(SshellInput *shell){
                 }
                 
         }
-        for(int i = 0; i < (shell->numOfCommand - 1) * 2; i++){
-                close(*fd[i]);
-                
-        }
+        
         
         
 }
@@ -247,8 +260,7 @@ int RetrieveVariable(VariableDictionary *listOfVariable, SshellInput *shell){
 
 
 void ExecuteCommand(CommandAndArgument *singleCommand){
-        //int ret;
-        //pid_t pid;
+
 
         if(singleCommand->numOfArgument >= 1){
                 char *newArgument = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
@@ -296,7 +308,7 @@ void ViewStart(){
         //CommandAndArgument listOfCommand[COMMAND_MAX_NUM];
         VariableDictionary listOfVariable;
         listOfVariable.numOfVariables = 0;
-        printf("sshell$ ");
+        printf("sshell@ucd$ ");
         while(fgets(userInput, CMD_MAX_LEN, stdin) != NULL){
                 
 
@@ -313,7 +325,7 @@ void ViewStart(){
                 }
                 
 
-                printf("sshell$ ");
+                printf("sshell@ucd$ ");
         }
 }
 
