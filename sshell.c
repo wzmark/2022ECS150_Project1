@@ -61,6 +61,11 @@ int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
         
         RedirectionOutput(singleCommand);
         int ret = execvp(singleCommand->command, singleCommand->argument);
+        if(ret == -1){
+                singleCommand->isSuccess = 0;
+        }else{
+                singleCommand->isSuccess = 1;
+        }
         return ret;
 }
 
@@ -71,66 +76,53 @@ int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
 void ExecutePipelineCommands(SshellInput *shell){
 
 
+        int i = shell->numOfCommand;
+        int pids[COMMAND_MAX_NUM];
+        int pipefd[COMMAND_MAX_NUM][2];
+        
+        
 
-        
-        pid_t pid;
-        
-        //int fd[COMMAND_MAX_NUM * 2];
-        
-        int fd[2 * COMMAND_MAX_NUM];
-        for(int i = 0; i < shell->numOfCommand; i++){
-                if(pipe(&fd[i])<0){
-                        exit(0);
+        for (i = 0; i < shell->numOfCommand - 1; i++)
+                pipe(pipefd[i]);
+
+        for (i = 0; i < shell->numOfCommand; i++)
+        {
+                int pid;
+                if ((pid = fork()) == 0)
+                {
+                
+                if (i != 0)
+                {
+                        dup2(pipefd[i - 1][0], STDIN_FILENO); 
                 }
-        }
-        printf("%d %d", fd[0], fd[1]);
-        for(int i = 0; i < shell->numOfCommand; i++){
-                //pipe(fd);
-                printf("loop %d\n", i);
-                pid = fork();
-                if(pid == 0){
-                        // has previous
-                        if(i - 1 >= 0){
-                                printf("%d\n", (i * 2) - 1);
-                                close(fd[i * 2 - 1]);
-                                dup2(fd[(i - 1) * 2], STDIN_FILENO);
-                                
-                                close(fd[(i - 1) * 2]);
-                                
-                        }
-
-                        if(i + 1 < shell->numOfCommand){
-                               
-                                
-                                close(fd[i * 2]);
-                                printf("%d\n", fd[i * 2]);
-                                printf("%d\n", fd[(i * 2) + 1]);
-                                dup2(fd[(i * 2) + 1], STDOUT_FILENO);
-                                
-                                
-                                close(fd[(i * 2) + 1]);
-                                
-                        }
-
-                        
-                        
-
-                        ExecuteCommand(&shell->listOfCommand[i]);
-                        //printf("%d %d %d %d\n", fd[0], fd[1], fd[2], fd[3]);
-                        exit(3);
+                if (i != shell->numOfCommand - 1)
+                {
+                        dup2(pipefd[i][1], STDOUT_FILENO);   
                 }
-                else if(pid > 0){
-                        int status;
-                        wait(&status);
-                        //printf("%d\n", fd[(i - 1) * 2]);
-                        
-                }else { 
-                        perror("fork");
-                        exit(1); 
+                for (int j = 0; j < shell->numOfCommand - 1; j++)    
+                {
+                        close(pipefd[j][0]);
+                        close(pipefd[j][1]);
                 }
                 
+                
+                ExecuteCommand(&shell->listOfCommand[i]);
+               
+                exit(0);
+                }else
+                        pids[i] = pid;
         }
-        
+
+        for (i = 0; i < shell->numOfCommand - 1; i++)       // JL: Fix
+        {
+                close(pipefd[i][0]);
+                close(pipefd[i][1]);
+        }
+        int status;
+        for(int i = 0; i < shell->numOfCommand; i++){
+                waitpid(pids[i],&status, 0);
+        }
+       
         
         
 }
@@ -261,7 +253,7 @@ int RetrieveVariable(VariableDictionary *listOfVariable, SshellInput *shell){
 
 void ExecuteCommand(CommandAndArgument *singleCommand){
 
-
+        //printf("2");
         if(singleCommand->numOfArgument >= 1){
                 char *newArgument = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
                 strcpy(newArgument, singleCommand->command);
@@ -287,7 +279,7 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
                 }
         }
         char *tempCommand = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
-        strcpy(tempCommand, "/bin/");
+        strcpy(tempCommand, "");
         
         strcat(tempCommand, singleCommand->command);
 
@@ -309,6 +301,7 @@ void ViewStart(){
         VariableDictionary listOfVariable;
         listOfVariable.numOfVariables = 0;
         printf("sshell@ucd$ ");
+        fflush(stdout);
         while(fgets(userInput, CMD_MAX_LEN, stdin) != NULL){
                 
 
@@ -326,6 +319,9 @@ void ViewStart(){
                 
 
                 printf("sshell@ucd$ ");
+                fflush(STDIN_FILENO);
+                setbuf(stdin, NULL);
+                
         }
 }
 

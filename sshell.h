@@ -13,6 +13,7 @@
 
 
 void ViewStart();
+void PrintMessage();
 int ExitHandler(char* userInput);
 int ErrorHandler(int statusCode);
 void ExecuteCommand(CommandAndArgument *singleCommand);

@@ -21,6 +21,7 @@ typedef struct{
     char *argument[ARGUMENT_MAX_NUM];
     int numOfArgument;
     int isRedirect; //0 is not, 1 is redirect
+    int isSuccess; //0 success, 1 success
 
 }CommandAndArgument;
 
