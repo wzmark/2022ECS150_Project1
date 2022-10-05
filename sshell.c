@@ -99,7 +99,9 @@ int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
 
 void ExecutePipelineCommands(SshellInput *shell){
 
-
+        if(ExecuteBuildInCommand(&shell->listOfCommand[0]) == 1){
+                return;
+        }
         
         int pids[COMMAND_MAX_NUM];
         int fd[COMMAND_MAX_NUM][2];
@@ -206,6 +208,40 @@ void RedirectionOutput(CommandAndArgument *singleCommand){
 //this function run the build in command, like cd pwd
 //return 0 if do not execute any command else return 1 return -1 if do not success
 int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
+
+
+        if(singleCommand->numOfArgument >= 1){
+                char *newArgument = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+                strcpy(newArgument, singleCommand->command);
+                
+                char *tempArgument = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+                for(int i = 0; i < COMMAND_MAX_NUM; i++){
+                        if(i < singleCommand->numOfArgument){
+
+                                strcpy(tempArgument, singleCommand->argument[i]);
+                                strcpy(singleCommand->argument[i], newArgument);
+                                strcpy(newArgument, tempArgument);
+                                
+                        }else if(i == singleCommand->numOfArgument){
+                                singleCommand->argument[i] = (char*)malloc(
+                                        ARGUMENT_MAX_LEN  * sizeof(char));
+                                strcpy(singleCommand->argument[i], newArgument);
+                                
+                        }else{
+                                singleCommand->argument[i] = (char*)malloc(
+                                        ARGUMENT_MAX_LEN  * sizeof(char));
+                                singleCommand->argument[i] = NULL;
+                        }  
+                }
+        }
+        char *tempCommand = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+        strcpy(tempCommand, "");
+        
+        strcat(tempCommand, singleCommand->command);
+
+        strcpy(singleCommand->command, tempCommand);
+
+
         //RedirectionOutput(singleCommand);
         char *buffer = (char*)malloc(PATH_MAX_LEN);
         getcwd(buffer, PATH_MAX_LEN);
@@ -219,13 +255,13 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
                 }
                 
                 char* temp = (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
-                strcat(temp, buffer);
-                strcat(temp, "/");
+                //strcat(temp, buffer);
+                //strcat(temp, "/");
                 strcat(temp, singleCommand->argument[1]);
                 strcpy(singleCommand->argument[1], temp);
 
 
-                printf("%s", singleCommand->argument[1]);
+                printf("%s\n", singleCommand->argument[1]);
                 if(chdir(singleCommand->argument[1]) < 0){
                         //can not cd file
                         ErrorHandler(2);
@@ -233,10 +269,11 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
                 }
                 return 1;
         }
-        free(buffer);
+        //free(buffer);
         return 0;
 }
 
+/*
 //this function set value to argument in command
 //find and retrieve value from contentOfVariable
 int SetVariable(VariableDictionary *listOfVariable, SshellInput *shell){
@@ -307,7 +344,7 @@ int RetrieveVariable(VariableDictionary *listOfVariable, SshellInput *shell){
         }
         return 0;
 }
-
+*/
 
 void ExecuteCommand(CommandAndArgument *singleCommand){
 
@@ -377,12 +414,14 @@ void ViewStart(){
 
                 //split input to struct CommandAndArgument
                 SplitInput(userInput, shell.listOfCommand, &shell.numOfCommand);
-                
+                /*
                 if(SetVariable(&listOfVariable, &shell) == 0){
                         RetrieveVariable(&listOfVariable, &shell);
                 
-                        ExecutePipelineCommands(&shell);
+                        
                 }
+                */
+                ExecutePipelineCommands(&shell);
                 PrintMessage(&shell);
 
                 printf("sshell@ucd$ ");
