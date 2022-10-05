@@ -12,7 +12,7 @@
 #define CMD_MAX_LEN 512
 #define COMMAND_MAX_LEN 32
 #define COMMAND_MAX_NUM 5
-#define PATH_MAX_LEN 128
+#define PATH_MAX_LEN 256
 #define VARIABLE_MAX_NUM 64
 
 
@@ -21,7 +21,7 @@ typedef struct{
     char *argument[ARGUMENT_MAX_NUM];
     int numOfArgument;
     int isRedirect; //0 is not, 1 is redirect
-    int isSuccess; //0 success, 1 success
+    int isSuccess; //0 is not success, 1 success
 
 }CommandAndArgument;
 
@@ -33,8 +33,10 @@ typedef struct{
 
 
 typedef struct{
-    CommandAndArgument listOfCommand[COMMAND_MAX_NUM];
+    CommandAndArgument listOfCommand[COMMAND_MAX_NUM]; //store split commnad and argument
+    
     int numOfCommand;
+    char* savedCommand;
 }SshellInput;
 
 #endif

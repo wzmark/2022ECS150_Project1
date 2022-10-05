@@ -13,7 +13,7 @@
 
 
 void ViewStart();
-void PrintMessage();
+void PrintMessage(SshellInput *shell);
 int ExitHandler(char* userInput);
 int ErrorHandler(int statusCode);
 void ExecuteCommand(CommandAndArgument *singleCommand);
