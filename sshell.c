@@ -18,6 +18,8 @@ void PrintMessage(SshellInput *shell){
         printf("%s", result);
 }
 
+
+
 //printf any error message, using errorType to determine the error type
 int ErrorHandler(int errorType){
         switch(errorType){
@@ -83,6 +85,9 @@ int ExitHandler(char* userInput){
 
 
 int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
+        if(singleCommand->isInverseRedirect == 1){
+                InverseRedirect(singleCommand);
+        }
         
         RedirectionOutput(singleCommand);
         int ret;
@@ -146,6 +151,8 @@ void ExecutePipelineCommands(SshellInput *shell){
                         
         }
 
+        
+
         for (int i = 0; i < shell->numOfCommand - 1; i++)       
         {
                 close(fd[i][0]);
@@ -167,6 +174,42 @@ void ExecutePipelineCommands(SshellInput *shell){
         
 }
 
+void InverseRedirect(CommandAndArgument *singleCommand){
+        int fd;
+        char fileName[PATH_MAX_LEN];
+        if(singleCommand->isInverseRedirect == 0){
+                return;
+        }else{
+                int indexOfRedirectSign;
+                for(int i = singleCommand->numOfArgument - 1; i > 0; i--){
+                        if(strcmp(singleCommand->argument[i], "<") == 0){
+                                indexOfRedirectSign = i;
+                        }
+                }
+                if(indexOfRedirectSign - 1 < 0){
+                        return;
+                }
+                if(singleCommand->argument[indexOfRedirectSign - 1] == NULL){
+                        //missing file name
+                        return;
+                }
+
+                strcpy(fileName, singleCommand->argument[indexOfRedirectSign + 1]);
+                singleCommand->argument[indexOfRedirectSign] = NULL;
+                singleCommand->argument[indexOfRedirectSign + 1] = NULL;
+                
+        }
+        printf("%s", fileName);
+        fd = open(fileName, O_RDWR|O_CREAT);
+        if(fd != -1){
+                
+                dup2(fd, STDIN_FILENO);
+                close(fd);
+        }else{
+                fprintf(stderr, "Error: cannot open intput file\n");
+        }
+
+}
 
 
 void RedirectionOutput(CommandAndArgument *singleCommand){
@@ -177,7 +220,7 @@ void RedirectionOutput(CommandAndArgument *singleCommand){
                 return;
         }else{
                 int indexOfRedirectSign;
-                for(int i = singleCommand->numOfArgument; i > 0; i--){
+                for(int i = singleCommand->numOfArgument - 1; i > 0; i--){
                         if(strcmp(singleCommand->argument[i], ">") == 0){
                                 indexOfRedirectSign = i;
                         }
@@ -208,6 +251,9 @@ void RedirectionOutput(CommandAndArgument *singleCommand){
 //this function run the build in command, like cd pwd
 //return 0 if do not execute any command else return 1 return -1 if do not success
 int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
+        if(strstr(singleCommand->command, "pwd") == NULL || strstr(singleCommand->command, "cd") != NULL){
+                return 0;
+        }
 
 
         if(singleCommand->numOfArgument >= 1){
@@ -261,7 +307,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
                 strcpy(singleCommand->argument[1], temp);
 
 
-                printf("%s\n", singleCommand->argument[1]);
+                //printf("%s\n", singleCommand->argument[1]);
                 if(chdir(singleCommand->argument[1]) < 0){
                         //can not cd file
                         ErrorHandler(2);
@@ -373,6 +419,7 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
                         }  
                 }
         }
+        
         char *tempCommand = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
         strcpy(tempCommand, "");
         
@@ -466,6 +513,17 @@ void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
                 }else{
                         listOfCommand[i].isRedirect = 0;
                 }
+
+                if(InverseRedirectionCommandHandler(listOfTempString[i]) == 1){
+                        listOfCommand[i].isInverseRedirect = 1;
+                        
+                        
+                }else{
+                        listOfCommand[i].isInverseRedirect = 0;
+                }
+
+
+
                 splitString = strtok(listOfTempString[i], splitChar);
                 
                 while(splitString != NULL){
@@ -495,7 +553,44 @@ void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
                 
         }
         
+
 }
+
+int InverseRedirectionCommandHandler(char *splitString){
+        //handle special case xx>xxx, xx> xx ,xx >xx
+        //transform them to the xx > xx
+        //return 1 if find > else return 0
+
+        //initialize var for front part and back part whether they exist
+        char *finalString = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));     
+        char *subString;
+        if(strchr(splitString, '<') == NULL){
+                //check whether can find >, if do not find return
+                return 0;
+        }else if(strlen(strchr(splitString, '<')) == 1){
+                //find >, but not need to separate
+                return 1;
+        }else{
+                //echo 123>file to echo 123 > file
+                subString = strtok(splitString, "<");
+                int flag = 0; //first loop flag
+                while(subString != NULL){
+                        strcat(finalString, subString);
+                        if(flag == 0){
+                                strcat(finalString, " < ");
+                                flag = 1;
+                        }
+                        subString = strtok(NULL, "<");
+                }
+                strcpy(splitString, finalString);
+                return 1;
+        }
+
+
+        
+        
+}
+
 
 //check whether exist redirection
 int RedirectionCommandHandler(char *splitString){

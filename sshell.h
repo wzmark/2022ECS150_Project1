@@ -13,6 +13,8 @@
 
 
 void ViewStart();
+void InverseRedirect(CommandAndArgument *singleCommand);
+int InverseRedirectionCommandHandler(char *splitString);
 void PrintMessage(SshellInput *shell);
 int ExitHandler(char* userInput);
 int ErrorHandler(int statusCode);

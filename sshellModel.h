@@ -17,19 +17,31 @@
 
 
 typedef struct{
-    char *command;
-    char *argument[ARGUMENT_MAX_NUM];
-    int numOfArgument;
-    int isRedirect; //0 is not, 1 is redirect
-    int isSuccess; //0 is not success, 1 success
+        char *command;
+        char *argument[ARGUMENT_MAX_NUM];
+        int numOfArgument;
+        int isRedirect; //0 is not, 1 is redirect
+        int isSuccess; //0 is not success, 1 success
+        int isInverseRedirect; //0 is not, 1 is redirect
 
 }CommandAndArgument;
 
 typedef struct{
-    int numOfVariables;
-    char *nameOfVariable[VARIABLE_MAX_NUM];
-    char *contentOfVariable[VARIABLE_MAX_NUM];
+        int numOfVariables;
+        char *nameOfVariable[VARIABLE_MAX_NUM];
+        char *contentOfVariable[VARIABLE_MAX_NUM];
 }VariableDictionary;
+
+typedef struct{
+        char *DirectoryPath;
+        Directory *nextDirectory;
+}Directory;
+
+typedef struct{
+        int numOfDirectory;
+        Directory *startDirectory;
+        Directory *endDirectory;
+}DirectoryList;
 
 
 typedef struct{
