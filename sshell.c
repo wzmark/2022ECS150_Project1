@@ -105,7 +105,7 @@ int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
 
 void ExecutePipelineCommands(SshellInput *shell){
 
-        if(ExecuteBuildInCommand(&shell->listOfCommand[0]) == 1){
+        if(ExecuteBuildInCommand(&shell->listOfCommand[0], shell) == 1){
                 return;
         }
         
@@ -251,10 +251,11 @@ void RedirectionOutput(CommandAndArgument *singleCommand){
 //if function find these command "pwd", "cd" return 1
 //this function run the build in command, like cd pwd
 //return 0 if do not execute any command else return 1 return -1 if do not success
-int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
-        if(strstr(singleCommand->command, "pwd") == NULL && strstr(singleCommand->command, "cd") == NULL){
+int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell){
+        if(strstr(singleCommand->command, "pwd") == NULL && strstr(singleCommand->command, "cd") == NULL && strstr(singleCommand->command, "dirs") == NULL && strstr(singleCommand->command, "pushd") == NULL && strstr(singleCommand->command, "popd") == NULL){
                 return 0;
         }
+        
 
 
         if(singleCommand->numOfArgument >= 1){
@@ -315,15 +316,61 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
                         return -1;
                 }
                 return 1;
-        }else if(strstr(singleCommand->command, "dirs") != NULL){
-                
-
-        }else if(strstr(singleCommand->command, "popd") != NULL){
-
-        }else if(strstr(singleCommand->command, "pushd") != NULL){
-
         }
         
+        
+        if(strstr(singleCommand->command, "dirs") != NULL){
+                if(shell->directoryStack.numOfDirectory == 0){
+                        return 0;
+                }
+                char *result = (char*)malloc(PATH_MAX_LEN * sizeof(char));
+
+                Directory *currentDirectory = shell->directoryStack.startDirectory;
+                do{
+                        strcat(result, currentDirectory->DirectoryPath);
+                        strcat(result, "\n");
+                        currentDirectory = (Directory*)currentDirectory->nextDirectory;
+                }while(currentDirectory == shell->directoryStack.endDirectory);
+                printf("%s", result);
+
+        }else if(strstr(singleCommand->command, "pushd") != NULL){
+                char *path = (char*)malloc(PATH_MAX_LEN * sizeof(char));
+                strcat(path, buffer);
+                strcat(path, "/");
+                strcat(path, singleCommand->argument[1]);
+                Directory *newDirectory = (Directory*)malloc(sizeof(Directory));
+                newDirectory->DirectoryPath = (char*)malloc(PATH_MAX_LEN * sizeof(char));
+                strcpy(newDirectory->DirectoryPath, path);
+                newDirectory->nextDirectory = NULL;
+                if(shell->directoryStack.numOfDirectory == 0){
+                        shell->directoryStack.startDirectory = newDirectory;
+                        shell->directoryStack.endDirectory = newDirectory;
+                }else{
+                        shell->directoryStack.endDirectory->nextDirectory = (struct Directory*)newDirectory;
+                        shell->directoryStack.endDirectory = newDirectory;
+                        
+                }
+                shell->directoryStack.numOfDirectory += 1;
+                if(chdir(path) < 0){
+                        //can not cd file
+                        ErrorHandler(2);
+                        return -1;
+                }
+
+        }else if(strstr(singleCommand->command, "popd") != NULL){
+                char *path = (char*)malloc(PATH_MAX_LEN * sizeof(char));
+                strcpy(path, shell->directoryStack.startDirectory->DirectoryPath);
+                
+                shell->directoryStack.startDirectory = (Directory*)shell->directoryStack.startDirectory->nextDirectory;
+                shell->directoryStack.numOfDirectory -= 1;
+                if(chdir(path) < 0){
+                        //can not cd file
+                        ErrorHandler(2);
+                        return -1;
+                }
+
+        }
+
         //free(buffer);
         return 0;
 }
@@ -436,10 +483,8 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
 
         strcpy(singleCommand->command, tempCommand);
         
+        ExecuteDefinedCommand(singleCommand);
         
-        if(ExecuteBuildInCommand(singleCommand) == 0){
-                ExecuteDefinedCommand(singleCommand);
-        }
 
         
         
@@ -449,6 +494,7 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
 void ViewStart(){
         char userInput[CMD_MAX_LEN];
         SshellInput shell;
+        shell.directoryStack.numOfDirectory = 0;
         //CommandAndArgument listOfCommand[COMMAND_MAX_NUM];
         //VariableDictionary listOfVariable;
         //listOfVariable.numOfVariables = 0;
@@ -477,6 +523,7 @@ void ViewStart(){
                         
                 }
                 */
+                
                 ExecutePipelineCommands(&shell);
                 PrintMessage(&shell);
 

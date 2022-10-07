@@ -25,13 +25,13 @@ typedef struct{
         int isInverseRedirect; //0 is not, 1 is redirect
 
 }CommandAndArgument;
-
+/*
 typedef struct{
         int numOfVariables;
         char *nameOfVariable[VARIABLE_MAX_NUM];
         char *contentOfVariable[VARIABLE_MAX_NUM];
 }VariableDictionary;
-/*
+*/
 typedef struct{
         char *DirectoryPath;
         struct Directory *nextDirectory;
@@ -42,11 +42,11 @@ typedef struct{
         Directory *startDirectory;
         Directory *endDirectory;
 }DirectoryList;
-*/
+
 
 typedef struct{
     CommandAndArgument listOfCommand[COMMAND_MAX_NUM]; //store split commnad and argument
-    //DirectoryList directoryStack;
+    DirectoryList directoryStack;
     int numOfCommand;
     char* savedCommand;
 }SshellInput;
