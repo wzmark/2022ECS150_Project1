@@ -85,10 +85,11 @@ int ExitHandler(char* userInput){
 
 
 int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
+        /*
         if(singleCommand->isInverseRedirect == 1){
                 InverseRedirect(singleCommand);
         }
-        
+        */
         RedirectionOutput(singleCommand);
         int ret;
         
@@ -251,7 +252,7 @@ void RedirectionOutput(CommandAndArgument *singleCommand){
 //this function run the build in command, like cd pwd
 //return 0 if do not execute any command else return 1 return -1 if do not success
 int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
-        if(strstr(singleCommand->command, "pwd") == NULL || strstr(singleCommand->command, "cd") != NULL){
+        if(strstr(singleCommand->command, "pwd") == NULL && strstr(singleCommand->command, "cd") == NULL){
                 return 0;
         }
 
