@@ -314,6 +314,13 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand){
                         return -1;
                 }
                 return 1;
+        }else if(strstr(singleCommand->command, "dirs") != NULL){
+                
+
+        }else if(strstr(singleCommand->command, "popd") != NULL){
+
+        }else if(strstr(singleCommand->command, "pushd") != NULL){
+
         }
         //free(buffer);
         return 0;
@@ -441,8 +448,8 @@ void ViewStart(){
         char userInput[CMD_MAX_LEN];
         SshellInput shell;
         //CommandAndArgument listOfCommand[COMMAND_MAX_NUM];
-        VariableDictionary listOfVariable;
-        listOfVariable.numOfVariables = 0;
+        //VariableDictionary listOfVariable;
+        //listOfVariable.numOfVariables = 0;
         printf("sshell@ucd$ ");
         fflush(stdout);
         while(fgets(userInput, CMD_MAX_LEN, stdin) != NULL){

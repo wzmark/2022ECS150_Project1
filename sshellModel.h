@@ -31,10 +31,10 @@ typedef struct{
         char *nameOfVariable[VARIABLE_MAX_NUM];
         char *contentOfVariable[VARIABLE_MAX_NUM];
 }VariableDictionary;
-
+/*
 typedef struct{
         char *DirectoryPath;
-        Directory *nextDirectory;
+        struct Directory *nextDirectory;
 }Directory;
 
 typedef struct{
@@ -42,11 +42,11 @@ typedef struct{
         Directory *startDirectory;
         Directory *endDirectory;
 }DirectoryList;
-
+*/
 
 typedef struct{
     CommandAndArgument listOfCommand[COMMAND_MAX_NUM]; //store split commnad and argument
-    
+    //DirectoryList directoryStack;
     int numOfCommand;
     char* savedCommand;
 }SshellInput;
