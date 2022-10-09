@@ -1,8 +1,8 @@
 #include "sshell.h"
 
+
+//print out complete message base on the running result
 void PrintMessage(SshellInput *shell){
-        //+ completed 'echo Hello world | grep Hello|wc -l' [0][0][0]
-        //shell->listOfCommand[0].isSuccess = 0;
 
         //initialize the completed message
         char* result = (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
@@ -10,11 +10,11 @@ void PrintMessage(SshellInput *shell){
         strcat(result, shell->savedCommand);
         strcat(result, "' ");
 
-        
+        //set error index
         for(int i = 0; i < shell->numOfCommand; i++){
-                //int errorIndex = i + 1;
+                
                 char errorIndex =  (char)((i + 1) + '0');
-                //strcpy(errorIndex, (char)((i + 1) + '0'));
+                //check the isSuccess in the CommandAndArgument
                 if(shell->listOfCommand[i].isSuccess == 1){
                         strcat(result, "[0]");
                 }else{
@@ -24,7 +24,9 @@ void PrintMessage(SshellInput *shell){
                 }
         }
         strcat(result, "\n");
+        //print complete message
         fprintf(stderr, "%s", result);
+        fflush(stdout);
 }
 
 
@@ -86,6 +88,8 @@ int ErrorHandler(int errorType){
 
 //detect whether user type in exit, if detect, print end message and return 1
 int ExitHandler(char* userInput){
+        //check whether user enter exit
+        //if find print end message and return 1, else return 0
         if(strstr(userInput, "exit") != NULL){
                 fprintf(stderr,"Bye...\n+ completed '%s' [0]\n", userInput);
 		return 1;
@@ -96,25 +100,32 @@ int ExitHandler(char* userInput){
 }
 
 
+
+//accept a single command struct and return if falure 
 int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
-        /*
+        
+        //check whether has inverse redirect if yes, call inverse redirect func
         if(singleCommand->isInverseRedirect == 1){
                 InverseRedirect(singleCommand);
         }
-        */
+        
         RedirectionOutput(singleCommand);
         int ret;
         
+        //exeute command and command
         ret = execvp(singleCommand->command, singleCommand->argument);
         
+        //only reach this line when execute fail
         exit(EXIT_FAILURE);
         return ret;
 }
 
 
 
-
-
+/*
+*
+*
+*/
 void ExecutePipelineCommands(SshellInput *shell){
 
         if(ExecuteBuildInCommand(&shell->listOfCommand[0], shell) == 1){
@@ -414,78 +425,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
         return 0;
 }
 
-/*
-//this function set value to argument in command
-//find and retrieve value from contentOfVariable
-int SetVariable(VariableDictionary *listOfVariable, SshellInput *shell){
-        
-        for(int i = 0; i < shell->numOfCommand; i++){
-                if(strcmp(shell->listOfCommand[i].command, "set") == 0 && shell->listOfCommand[i].numOfArgument == 2){
-                        //retrieve number of variable for setting variable into list
-                        int numberOfVariable = listOfVariable->numOfVariables;
 
-                        listOfVariable->nameOfVariable[numberOfVariable] = (char*)malloc(VARIABLE_MAX_NUM  * sizeof(char));
-                        listOfVariable->contentOfVariable[numberOfVariable] = (char*)malloc(VARIABLE_MAX_NUM  * sizeof(char));
-                        strcpy(listOfVariable->nameOfVariable[numberOfVariable], shell->listOfCommand[i].argument[0]);
-                        strcpy(listOfVariable->contentOfVariable[numberOfVariable], shell->listOfCommand[i].argument[1]);
-                        numberOfVariable = numberOfVariable + 1;
-                        listOfVariable->numOfVariables = numberOfVariable;
-                }else if(strcmp(shell->listOfCommand[i].command, "set") == 0 && shell->listOfCommand[i].numOfArgument == 0){
-                        ErrorHandler(8);
-                        //TODO:
-                }
-        }
-        return 0;
-}
-
-int FindVariable(VariableDictionary *listOfVariable, char *tempOfVarName){
-        for(int i = 0; i < listOfVariable->numOfVariables; i++){
-                if(strcmp(listOfVariable->nameOfVariable[i], tempOfVarName) == 0){
-                        return i;
-                }
-        }
-        return -1;
-}
-
-int RetrieveVariable(VariableDictionary *listOfVariable, SshellInput *shell){
-        char *tempOfVarName;
-        int tempOfPosition;
-        for(int i = 0; i < shell->numOfCommand; i++){
-                //for command 
-                if(strstr(shell->listOfCommand[i].command, "$") != NULL){
-                        tempOfVarName = strtok(shell->listOfCommand[i].command, "$");
-                        tempOfPosition = FindVariable(listOfVariable, tempOfVarName);
-                        if(tempOfPosition == -1){
-
-                        }else{
-                                strcpy(shell->listOfCommand[i].command, listOfVariable->contentOfVariable[tempOfPosition]);
-                        }
-                        //TODO: error handling in not finding position
-
-                        
-                }
-
-                //for argument
-                for(int j = 0; j < shell->listOfCommand[i].numOfArgument; j++){
-                        if(strstr(shell->listOfCommand[i].argument[j], "$") != NULL){
-                                tempOfVarName = strtok(shell->listOfCommand[i].argument[j], "$");
-                                tempOfPosition = FindVariable(listOfVariable, tempOfVarName);
-                                if(tempOfPosition == -1){
-                                        //for not finding right value
-                                        strcpy(shell->listOfCommand[i].argument[j], " ");
-                                }else{
-                                        strcpy(shell->listOfCommand[i].argument[j], listOfVariable->contentOfVariable[tempOfPosition]);
-                                }
-                                //TODO: error handling in not finding position
-
-                                
-                        }
-                        
-                }
-        }
-        return 0;
-}
-*/
 
 void ExecuteCommand(CommandAndArgument *singleCommand){
 
