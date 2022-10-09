@@ -162,11 +162,11 @@ void ExecutePipelineCommands(SshellInput *shell){
         int status;
         for(int i = 0; i < shell->numOfCommand; i++){
                 waitpid(pids[i],&status, 0);
-                printf("%d\n", status);
+                //printf("%d\n", status);
                 if(status != 0){
                         shell->listOfCommand[i].isSuccess = 0;
                 }else{
-                        printf("success");
+                        
                         shell->listOfCommand[i].isSuccess = 1;
                 }
         }
