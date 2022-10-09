@@ -1,7 +1,7 @@
 #include "sshell.h"
 
 
-//print out complete message base on the running result
+//
 void PrintMessage(SshellInput *shell){
 
         //initialize the completed message
@@ -595,7 +595,7 @@ void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
 int InverseRedirectionCommandHandler(char *splitString){
         //handle special case xx>xxx, xx> xx ,xx >xx
         //transform them to the xx > xx
-        //return 1 if find > else return 0
+        //
 
         //initialize var for front part and back part whether they exist
         char *finalString = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));     

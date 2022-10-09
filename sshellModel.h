@@ -18,38 +18,34 @@
 
 
 typedef struct{
-        char *command;
-        char *argument[ARGUMENT_MAX_NUM];
-        int numOfArgument;
+        char *command; //store command
+        char *argument[ARGUMENT_MAX_NUM]; //store command and argument
+        int numOfArgument; // number of argument
         int isRedirect; //0 is not, 1 is redirect
         int isSuccess; //0 is not success, 1 success
         int isInverseRedirect; //0 is not, 1 is redirect
 
 }CommandAndArgument;
-/*
-typedef struct{
-        int numOfVariables;
-        char *nameOfVariable[VARIABLE_MAX_NUM];
-        char *contentOfVariable[VARIABLE_MAX_NUM];
-}VariableDictionary;
-*/
-typedef struct{
-        char *DirectoryPath;
-        struct Directory *nextDirectory;
-}Directory;
+
 
 typedef struct{
-        int numOfDirectory;
-        Directory *startDirectory;
-        Directory *endDirectory;
+        char *DirectoryPath;//directory path in char* type
+        struct Directory *nextDirectory; //next struct
+}Directory;
+
+//single linked list
+typedef struct{
+        int numOfDirectory; //number of directory store in the struct
+        Directory *startDirectory; //start node of list
+        Directory *endDirectory; //end node of the list
 }DirectoryList;
 
 
 typedef struct{
     CommandAndArgument listOfCommand[COMMAND_MAX_NUM]; //store split commnad and argument
-    DirectoryList directoryStack;
-    int numOfCommand;
-    char* savedCommand;
+    DirectoryList directoryStack; //stack of the directory
+    int numOfCommand; //number of command
+    char* savedCommand; //store the userInput
 }SshellInput;
 
 #endif
