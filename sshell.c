@@ -252,8 +252,14 @@ void RedirectionOutput(CommandAndArgument *singleCommand){
 //this function run the build in command, like cd pwd
 //return 0 if do not execute any command else return 1 return -1 if do not success
 int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell){
-        if(strstr(singleCommand->command, "pwd") == NULL && strstr(singleCommand->command, "cd") == NULL && strstr(singleCommand->command, "dirs") == NULL && strstr(singleCommand->command, "pushd") == NULL && strstr(singleCommand->command, "popd") == NULL){
+        if(strstr(singleCommand->command, "pwd") == NULL && 
+                strstr(singleCommand->command, "cd") == NULL &&
+                strstr(singleCommand->command, "dirs") == NULL && 
+                strstr(singleCommand->command, "pushd") == NULL && 
+                strstr(singleCommand->command, "popd") == NULL){
+
                 return 0;
+
         }
         
 
@@ -296,6 +302,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
         if(strstr(singleCommand->command, "pwd") != NULL){
                 //getcwd(buffer, PATH_MAX_LEN);
                 fprintf(stdout, "%s\n", buffer);
+                singleCommand->isSuccess = 1;
                 return 1;
         }else if(strstr(singleCommand->command, "cd") != NULL){
                 if(singleCommand->numOfArgument == 0){
@@ -315,6 +322,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                         ErrorHandler(2);
                         return -1;
                 }
+                singleCommand->isSuccess = 1;
                 return 1;
         }
         
@@ -323,15 +331,29 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 if(shell->directoryStack.numOfDirectory == 0){
                         return 0;
                 }
-                char *result = (char*)malloc(PATH_MAX_LEN * sizeof(char));
-
+                //char *result = (char*)malloc(PATH_MAX_LEN * sizeof(char));
+                char *result[PATH_MAX_NUM];
+                int index = 0;
                 Directory *currentDirectory = shell->directoryStack.startDirectory;
+
                 do{
-                        strcat(result, currentDirectory->DirectoryPath);
-                        strcat(result, "\n");
+                        result[index] = (char*)malloc(PATH_MAX_LEN * sizeof(char));
+
+                        strcat(result[index], currentDirectory->DirectoryPath);
+                        //strcat(result[index], "\n");
+                        index += 1;
+                        //printf("%s\n", currentDirectory->DirectoryPath);
                         currentDirectory = (Directory*)currentDirectory->nextDirectory;
                 }while(currentDirectory == shell->directoryStack.endDirectory);
-                printf("%s", result);
+
+                for(int i = index - 1; i >= 0; i--){
+                        printf("%s\n", result[i]);
+                }
+                
+
+
+                singleCommand->isSuccess = 1;
+                return 1;
 
         }else if(strstr(singleCommand->command, "pushd") != NULL){
                 char *path = (char*)malloc(PATH_MAX_LEN * sizeof(char));
@@ -342,6 +364,13 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 newDirectory->DirectoryPath = (char*)malloc(PATH_MAX_LEN * sizeof(char));
                 strcpy(newDirectory->DirectoryPath, path);
                 newDirectory->nextDirectory = NULL;
+                
+                shell->directoryStack.numOfDirectory += 1;
+                if(chdir(path) < 0){
+                        //can not cd file
+                        ErrorHandler(2);
+                        return -1;
+                }
                 if(shell->directoryStack.numOfDirectory == 0){
                         shell->directoryStack.startDirectory = newDirectory;
                         shell->directoryStack.endDirectory = newDirectory;
@@ -350,12 +379,8 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                         shell->directoryStack.endDirectory = newDirectory;
                         
                 }
-                shell->directoryStack.numOfDirectory += 1;
-                if(chdir(path) < 0){
-                        //can not cd file
-                        ErrorHandler(2);
-                        return -1;
-                }
+                singleCommand->isSuccess = 1;
+                return 1;
 
         }else if(strstr(singleCommand->command, "popd") != NULL){
                 char *path = (char*)malloc(PATH_MAX_LEN * sizeof(char));
@@ -368,6 +393,8 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                         ErrorHandler(2);
                         return -1;
                 }
+                singleCommand->isSuccess = 1;
+                return 1;
 
         }
 

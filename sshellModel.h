@@ -13,6 +13,7 @@
 #define COMMAND_MAX_LEN 32
 #define COMMAND_MAX_NUM 5
 #define PATH_MAX_LEN 256
+#define PATH_MAX_NUM 32
 #define VARIABLE_MAX_NUM 64
 
 
