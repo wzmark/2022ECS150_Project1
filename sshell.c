@@ -3,15 +3,24 @@
 void PrintMessage(SshellInput *shell){
         //+ completed 'echo Hello world | grep Hello|wc -l' [0][0][0]
         //shell->listOfCommand[0].isSuccess = 0;
+
+        //initialize the completed message
         char* result = (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
         strcpy(result,  "+ completed '");
         strcat(result, shell->savedCommand);
         strcat(result, "' ");
+
+        
         for(int i = 0; i < shell->numOfCommand; i++){
+                //int errorIndex = i + 1;
+                char errorIndex =  (char)((i + 1) + '0');
+                //strcpy(errorIndex, (char)((i + 1) + '0'));
                 if(shell->listOfCommand[i].isSuccess == 1){
                         strcat(result, "[0]");
                 }else{
-                        strcat(result, "[1]");
+                        strcat(result, "[");
+                        strcat(result, &errorIndex);
+                        strcat(result, "]");
                 }
         }
         strcat(result, "\n");
