@@ -15,7 +15,7 @@ void PrintMessage(SshellInput *shell){
                 }
         }
         strcat(result, "\n");
-        printf("%s", result);
+        fprintf(stderr, "%s", result);
 }
 
 
@@ -27,11 +27,13 @@ int ErrorHandler(int errorType){
                         //can not open output file
                         fprintf(stderr, 
 				"Error: cannot open output file\n");
+                        
                         break;
                 case 2:
                         //can not cd
                         fprintf(stderr, 
 				"Error: cannot cd file\n");
+                        
                         break;
                 case 3:
                         fprintf(stderr, 
@@ -69,6 +71,7 @@ int ErrorHandler(int errorType){
                         break;
                         
         }
+        fflush(stdout);
         return 0;
 }
 
@@ -528,7 +531,8 @@ void ViewStart(){
         printf("sshell@ucd$ ");
         fflush(stdout);
         while(fgets(userInput, CMD_MAX_LEN, stdin) != NULL){
-                
+                printf("%s", userInput);
+                fflush(stdout);
                 //find postion of \n and set it to 0 for deleting 
                 userInput[strcspn(userInput, "\n")] = 0;
 
@@ -555,8 +559,8 @@ void ViewStart(){
                 PrintMessage(&shell);
 
                 printf("sshell@ucd$ ");
-                fflush(STDIN_FILENO);
-                setbuf(stdin, NULL);
+                fflush(stdout);
+                //setbuf(stdin, NULL);
                 
         }
 }
