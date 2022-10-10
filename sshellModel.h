@@ -8,7 +8,7 @@
 #include <sys/types.h>
 
 #define ARGUMENT_MAX_LEN 32
-#define ARGUMENT_MAX_NUM 10
+#define ARGUMENT_MAX_NUM 20
 #define CMD_MAX_LEN 512
 #define COMMAND_MAX_LEN 32
 #define COMMAND_MAX_NUM 5
@@ -24,7 +24,7 @@ typedef struct{
         int isRedirect; //0 is not, 1 is redirect
         int isSuccess; //0 is not success, 1 success
         int isInverseRedirect; //0 is not, 1 is redirect
-
+        int isError; //0 is not, 1 is yes
 }CommandAndArgument;
 
 //Node of directory

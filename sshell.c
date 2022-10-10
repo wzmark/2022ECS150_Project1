@@ -1,6 +1,6 @@
 #include "sshell.h"
 
-
+//TODO:"Error: mislocated output redirection"
 
 void PrintMessage(SshellInput *shell){
 
@@ -18,6 +18,7 @@ void PrintMessage(SshellInput *shell){
                 if(shell->listOfCommand[i].isSuccess == 1){
                         strcat(result, "[0]");
                 }else{
+                        ErrorHandler(1);
                         strcat(result, "[");
                         strcat(result, &errorIndex);
                         strcat(result, "]");
@@ -39,7 +40,7 @@ int ErrorHandler(int errorType){
                 case 1:
                         //can not open output file
                         fprintf(stderr, 
-				"Error: cannot open output file\n");
+				"Error: command not found\n");
                         
                         break;
                 case 2:
@@ -55,12 +56,12 @@ int ErrorHandler(int errorType){
                         break;
                 case 4:
                         fprintf(stderr, 
-				"Error: command not found\n");
+				"Error: missing command\n");
                         //missing command
                         break;
                 case 5:
                         fprintf(stderr, 
-				"Error: too much argument\n");
+				"Error: too many process arguments\n");
                         //too much argument
                         break;
                 case 6:
@@ -76,7 +77,7 @@ int ErrorHandler(int errorType){
 
                 case 8:
                         fprintf(stderr, 
-				"Error: invalid variable name\n");
+				"Error: missing command\n");
 
                         
                         break;
@@ -252,7 +253,8 @@ void InverseRedirect(CommandAndArgument *singleCommand){
                 dup2(fd, STDIN_FILENO);
                 close(fd);
         }else{
-                fprintf(stderr, "Error: cannot open intput file\n");
+                ErrorHandler(3);
+                singleCommand->isSuccess = 0;
         }
 
 }
@@ -295,7 +297,8 @@ void RedirectionOutput(CommandAndArgument *singleCommand){
                 dup2(fd, STDOUT_FILENO);
                 close(fd);
         }else{
-                fprintf(stderr, "Error: cannot open output file\n");
+                ErrorHandler(3);
+                singleCommand->isSuccess = 0;
         }
 }
 
@@ -533,11 +536,43 @@ void ViewStart(){
                 //split input to struct CommandAndArgument
                 SplitInput(userInput, shell.listOfCommand, &shell.numOfCommand);
                 
-                //execute the pipeline or directly execute
-                ExecutePipelineCommands(&shell);
-                //print out completed message
-                PrintMessage(&shell);
+                //detect whether occur parsing error
+                int isError = 0;
+                for(int i = 0; i < shell.numOfCommand; i++){
+                        if(shell.listOfCommand[i].isError == 1){
+                                isError = 1;
+                        }
+                }
+                
+                if(isError == 0){
+                        //execute the pipeline or directly execute
+                        ExecutePipelineCommands(&shell);
+                        //print out completed message
+                        PrintMessage(&shell);
+                }
 
+
+                for(int i = 0; i < shell.numOfCommand; i++){
+                        free(shell.listOfCommand[i].command);
+
+                        int minNum;
+                        if(ARGUMENT_MAX_NUM < shell.listOfCommand[i].numOfArgument){
+                                minNum = ARGUMENT_MAX_NUM;
+                        }else{
+                                minNum = shell.listOfCommand[i].numOfArgument;
+                        }
+                        for(int j = 0; j < minNum; j++){
+                                free(shell.listOfCommand[i].argument[j]);
+                        }
+                        shell.listOfCommand[i].numOfArgument = 0; // number of argument
+                        shell.listOfCommand[i].isRedirect = -1; //0 is not, 1 is redirect
+                        shell.listOfCommand[i].isSuccess = -1; //0 is not success, 1 success
+                        shell.listOfCommand[i].isInverseRedirect = -1; //0 is not, 1 is redirect
+                        shell.listOfCommand[i].isError = -1; //0 is not, 1 is yes
+                }
+                //free(shell.listOfCommand);
+                shell.numOfCommand = 0;
+                
                 printf("sshell@ucd$ ");
                 fflush(stdout);
                 
@@ -554,8 +589,14 @@ void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
         char splitChar[2] = "|";
         //if find command set to 1, reset to zero after meet '|'
         int isFindCommand = 0;
+        int numOfPipeline = 0;
         //if command is redirect, set to 1
-        //int isRedirect = 0;
+        
+        for(unsigned long i = 0; i < strlen(userInput); i++){
+                if(strcmp(&userInput[i], "|") == 0){
+                        numOfPipeline += 1;
+                }
+        }
 
         //split whole pipeline in to seperate command
         int index = 0;
@@ -574,37 +615,40 @@ void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
         int numOfArgument = 0;
         //first loop is for number of combos
         for(int i = 0; i < index; i++){
+
+                if(listOfTempString[i] == NULL){
+                        ErrorHandler(8);
+                        listOfCommand[i].isError = 1;
+                }
                 
-                if(RedirectionCommandHandler(listOfTempString[i]) == 1){
+                int flag = RedirectionCommandHandler(listOfTempString[i]);
+                if(flag == 1){
                         listOfCommand[i].isRedirect = 1;
-                }else{
+                }else if(flag == 0){
                         listOfCommand[i].isRedirect = 0;
                 }
 
-                if(InverseRedirectionCommandHandler(listOfTempString[i]) == 1){
+                flag = InverseRedirectionCommandHandler(listOfTempString[i]);
+                if(flag == 1){
                         listOfCommand[i].isInverseRedirect = 1;
-                        
-                        
-                }else{
+                }else if(flag == 0){
                         listOfCommand[i].isInverseRedirect = 0;
                 }
 
-
-
+                
                 splitString = strtok(listOfTempString[i], splitChar);
                 
                 while(splitString != NULL){
                         
                         if(isFindCommand == 0){
                                 isFindCommand = 1; //find command
-                                //tempCommand = (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
+                                
                                 listOfCommand[i].command = (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
                                 strcpy(listOfCommand[i].command, splitString);
                                 
                                 
                         }else{
                                 
-                                //tempArgument[i] = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
                                 listOfCommand[i].argument[numOfArgument] = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
                                 strcpy(listOfCommand[i].argument[numOfArgument], splitString);
                                 numOfArgument++; 
@@ -612,11 +656,36 @@ void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
                         
                         splitString = strtok(NULL, splitChar);
                 }
+
+                if(numOfPipeline != (index - 1)){
+                        listOfCommand[i].isError = 1;
+                        ErrorHandler(4);
+                }
                 
+                //check whether too much arguments
+                if(numOfArgument > 10){
+                        listOfCommand[i].isError = 1;
+                        ErrorHandler(5);
+                }
+
+                if(strcmp(listOfCommand[i].command, ">") == 0 || strcmp(listOfCommand[i].command, "<") == 0){
+                        listOfCommand[i].isError = 1;
+                        ErrorHandler(4);
+                }
+
+                for(int j = 0; j < numOfArgument; j++){
+                        if(strcmp(listOfCommand[i].argument[j], ">") == 0 || strcmp(listOfCommand[i].argument[j], "<") == 0){
+                                if(j + 2 > numOfArgument){
+                                        ErrorHandler(6);
+                                        listOfCommand[i].isError = 1;
+                                }
+                                
+                        }
+                }
+
                 listOfCommand[i].numOfArgument = numOfArgument;
                 isFindCommand = 0; //reset isFindCommand for next loop
                 numOfArgument = 0;
-                //tempCommand = NULL;
                 
         }
         
@@ -641,7 +710,9 @@ int InverseRedirectionCommandHandler(char *splitString){
                 //echo 123>file to echo 123 > file
                 subString = strtok(splitString, "<");
                 int flag = 0; //first loop flag
+                
                 while(subString != NULL){
+                        
                         strcat(finalString, subString);
                         if(flag == 0){
                                 strcat(finalString, " < ");
@@ -649,6 +720,8 @@ int InverseRedirectionCommandHandler(char *splitString){
                         }
                         subString = strtok(NULL, "<");
                 }
+                
+                
                 strcpy(splitString, finalString);
                 return 1;
         }
@@ -678,7 +751,10 @@ int RedirectionCommandHandler(char *splitString){
                 //echo 123>file to echo 123 > file
                 subString = strtok(splitString, ">");
                 int flag = 0; //first loop flag
+                
+
                 while(subString != NULL){
+                        
                         strcat(finalString, subString);
                         if(flag == 0){
                                 strcat(finalString, " > ");
@@ -686,6 +762,7 @@ int RedirectionCommandHandler(char *splitString){
                         }
                         subString = strtok(NULL, ">");
                 }
+                
                 strcpy(splitString, finalString);
                 return 1;
         }
