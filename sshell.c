@@ -317,10 +317,12 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
         
         //relocate the position of command and argument
         if(singleCommand->numOfArgument >= 1){
-                char *newArgument = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+                char *newArgument = 
+                        (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
                 strcpy(newArgument, singleCommand->command);
                 
-                char *tempArgument = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+                char *tempArgument = 
+                        (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
                 for(int i = 0; i < COMMAND_MAX_NUM; i++){
                         if(i < singleCommand->numOfArgument){
 
@@ -385,14 +387,17 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 char *result[PATH_MAX_NUM];
                 int index = 0;
                 //initialize temp node for looop
-                Directory *currentDirectory = shell->directoryStack.startDirectory;
+                Directory *currentDirectory = 
+                        shell->directoryStack.startDirectory;
 
                 //loop whole stack and push it into result list
                 do{
-                        result[index] = (char*)malloc(PATH_MAX_LEN * sizeof(char));
+                        result[index] = 
+                                (char*)malloc(PATH_MAX_LEN * sizeof(char));
                         strcat(result[index], currentDirectory->DirectoryPath);
                         index += 1;
-                        currentDirectory = (Directory*)currentDirectory->nextDirectory;
+                        currentDirectory = 
+                                (Directory*)currentDirectory->nextDirectory;
                 }while(currentDirectory == shell->directoryStack.endDirectory);
 
                 //print result
@@ -413,7 +418,8 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
 
                 //initialize directory node
                 Directory *newDirectory = (Directory*)malloc(sizeof(Directory));
-                newDirectory->DirectoryPath = (char*)malloc(PATH_MAX_LEN * sizeof(char));
+                newDirectory->DirectoryPath = 
+                        (char*)malloc(PATH_MAX_LEN * sizeof(char));
                 strcpy(newDirectory->DirectoryPath, path);
                 newDirectory->nextDirectory = NULL;
                 shell->directoryStack.numOfDirectory += 1;
@@ -446,7 +452,8 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
 
                 //reset the start node of the list
                 shell->directoryStack.startDirectory = 
-                        (Directory*)shell->directoryStack.startDirectory->nextDirectory;
+                        (Directory*)shell->
+                                directoryStack.startDirectory->nextDirectory;
                 shell->directoryStack.numOfDirectory -= 1;
 
                 //cd into directory 
@@ -469,10 +476,12 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
 
         //command + list of argument to command + {command + argument +NULL}
         if(singleCommand->numOfArgument >= 1){
-                char *newArgument = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+                char *newArgument = 
+                        (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
                 strcpy(newArgument, singleCommand->command);
                 
-                char *tempArgument = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+                char *tempArgument = 
+                        (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
                 for(int i = 0; i < COMMAND_MAX_NUM; i++){
                         if(i < singleCommand->numOfArgument){
 
@@ -531,7 +540,8 @@ void ViewStart(){
                 }
 
                 //backup user input for final print result
-                shell.savedCommand = (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
+                shell.savedCommand = 
+                        (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
                 strcpy(shell.savedCommand, userInput);
 
                 //split input to struct CommandAndArgument
