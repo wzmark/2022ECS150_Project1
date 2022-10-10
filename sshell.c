@@ -1,6 +1,5 @@
 #include "sshell.h"
 
-//TODO:"Error: mislocated output redirection"
 
 void PrintMessage(SshellInput *shell){
 
@@ -431,7 +430,8 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                         shell->directoryStack.startDirectory = newDirectory;
                         shell->directoryStack.endDirectory = newDirectory;
                 }else{
-                        shell->directoryStack.endDirectory->nextDirectory = (struct Directory*)newDirectory;
+                        shell->directoryStack.endDirectory->nextDirectory = 
+                                (struct Directory*)newDirectory;
                         shell->directoryStack.endDirectory = newDirectory;
                         
                 }
@@ -445,7 +445,8 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 strcpy(path, shell->directoryStack.startDirectory->DirectoryPath);
 
                 //reset the start node of the list
-                shell->directoryStack.startDirectory = (Directory*)shell->directoryStack.startDirectory->nextDirectory;
+                shell->directoryStack.startDirectory = 
+                        (Directory*)shell->directoryStack.startDirectory->nextDirectory;
                 shell->directoryStack.numOfDirectory -= 1;
 
                 //cd into directory 
@@ -551,7 +552,7 @@ void ViewStart(){
                         PrintMessage(&shell);
                 }
 
-
+                //reset whole data of command and argument
                 for(int i = 0; i < shell.numOfCommand; i++){
                         free(shell.listOfCommand[i].command);
 
@@ -564,13 +565,13 @@ void ViewStart(){
                         for(int j = 0; j < minNum; j++){
                                 free(shell.listOfCommand[i].argument[j]);
                         }
-                        shell.listOfCommand[i].numOfArgument = 0; // number of argument
-                        shell.listOfCommand[i].isRedirect = -1; //0 is not, 1 is redirect
-                        shell.listOfCommand[i].isSuccess = -1; //0 is not success, 1 success
-                        shell.listOfCommand[i].isInverseRedirect = -1; //0 is not, 1 is redirect
-                        shell.listOfCommand[i].isError = -1; //0 is not, 1 is yes
+                        shell.listOfCommand[i].numOfArgument = 0; 
+                        shell.listOfCommand[i].isRedirect = -1;
+                        shell.listOfCommand[i].isSuccess = -1; 
+                        shell.listOfCommand[i].isInverseRedirect = -1;
+                        shell.listOfCommand[i].isError = -1; 
                 }
-                //free(shell.listOfCommand);
+                
                 shell.numOfCommand = 0;
                 
                 printf("sshell@ucd$ ");
@@ -580,7 +581,8 @@ void ViewStart(){
         }
 }
 
-void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, int *numOfCommand){
+void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
+        int *numOfCommand){
         
         //store commands from echo 123|tr 2 1 to "echo 123", "tr 2 1"
         char listOfTempString[COMMAND_MAX_NUM][COMMAND_MAX_LEN];
@@ -644,13 +646,15 @@ void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
                         if(isFindCommand == 0){
                                 isFindCommand = 1; //find command
                                 
-                                listOfCommand[i].command = (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
+                                listOfCommand[i].command = 
+                                        (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
                                 strcpy(listOfCommand[i].command, splitString);
                                 
                                 
                         }else{
                                 
-                                listOfCommand[i].argument[numOfArgument] = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+                                listOfCommand[i].argument[numOfArgument] = 
+                                        (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
                                 strcpy(listOfCommand[i].argument[numOfArgument], splitString);
                                 numOfArgument++; 
                         }
@@ -669,13 +673,17 @@ void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
                         ErrorHandler(5);
                 }
 
-                if(strcmp(listOfCommand[i].command, ">") == 0 || strcmp(listOfCommand[i].command, "<") == 0){
+                if(strcmp(listOfCommand[i].command, ">") == 0 || 
+                                strcmp(listOfCommand[i].command, "<") == 0){
+
                         listOfCommand[i].isError = 1;
                         ErrorHandler(4);
                 }
 
                 for(int j = 0; j < numOfArgument; j++){
-                        if(strcmp(listOfCommand[i].argument[j], ">") == 0 || strcmp(listOfCommand[i].argument[j], "<") == 0){
+                        if(strcmp(listOfCommand[i].argument[j], ">") == 0 || 
+                                strcmp(listOfCommand[i].argument[j], "<") == 0){
+
                                 if(j + 2 > numOfArgument){
                                         ErrorHandler(6);
                                         listOfCommand[i].isError = 1;
@@ -766,8 +774,6 @@ int RedirectionCommandHandler(char *splitString){
                 return 1;
         }
 
-
-        
         
 }
 
