@@ -708,9 +708,6 @@ int InverseRedirectionCommandHandler(char *splitString){
         if(strchr(splitString, '<') == NULL){
                 //check whether can find >, if do not find return
                 return 0;
-        }else if(strlen(strchr(splitString, '<')) == 1){
-                //find >, but not need to separate
-                return 1;
         }else{
                 //echo 123>file to echo 123 > file
                 subString = strtok(splitString, "<");
@@ -749,9 +746,6 @@ int RedirectionCommandHandler(char *splitString){
         if(strchr(splitString, '>') == NULL){
                 //check whether can find >, if do not find return
                 return 0;
-        }else if(strlen(strchr(splitString, '>')) == 1){
-                //find >, but not need to separate
-                return 1;
         }else{
                 //echo 123>file to echo 123 > file
                 subString = strtok(splitString, ">");
