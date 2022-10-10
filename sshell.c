@@ -71,7 +71,7 @@ int ErrorHandler(int errorType){
                         break;
                 case 7:
                         fprintf(stderr,
-                                "Error: mislocated output redirection");
+                                "Error: mislocated output redirection\n");
                         //mislocated output redirection
                         break;
 
@@ -593,7 +593,8 @@ void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
         //if command is redirect, set to 1
         
         for(unsigned long i = 0; i < strlen(userInput); i++){
-                if(strcmp(&userInput[i], "|") == 0){
+                char tempCharacter = userInput[i];
+                if(tempCharacter == '|'){
                         numOfPipeline += 1;
                 }
         }
@@ -677,6 +678,10 @@ void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
                         if(strcmp(listOfCommand[i].argument[j], ">") == 0 || strcmp(listOfCommand[i].argument[j], "<") == 0){
                                 if(j + 2 > numOfArgument){
                                         ErrorHandler(6);
+                                        listOfCommand[i].isError = 1;
+                                }
+                                if(i != numOfPipeline){
+                                        ErrorHandler(7);
                                         listOfCommand[i].isError = 1;
                                 }
                                 
