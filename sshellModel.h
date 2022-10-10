@@ -16,7 +16,7 @@
 #define PATH_MAX_NUM 32
 #define VARIABLE_MAX_NUM 64
 
-
+//Store data of command, argument, and flags
 typedef struct{
         char *command; //store command
         char *argument[ARGUMENT_MAX_NUM]; //store command and argument
@@ -27,20 +27,20 @@ typedef struct{
 
 }CommandAndArgument;
 
-
+//Node of directory
 typedef struct{
         char *DirectoryPath;//directory path in char* type
         struct Directory *nextDirectory; //next struct
 }Directory;
 
-//single linked list
+//single linked list of directory
 typedef struct{
         int numOfDirectory; //number of directory store in the struct
         Directory *startDirectory; //start node of list
         Directory *endDirectory; //end node of the list
 }DirectoryList;
 
-
+//main struct include list of command and stack of directory
 typedef struct{
     CommandAndArgument listOfCommand[COMMAND_MAX_NUM]; //store split commnad and argument
     DirectoryList directoryStack; //stack of the directory

@@ -1,7 +1,7 @@
 #include "sshell.h"
 
 
-//
+
 void PrintMessage(SshellInput *shell){
 
         //initialize the completed message
@@ -31,8 +31,10 @@ void PrintMessage(SshellInput *shell){
 
 
 
-//printf any error message, using errorType to determine the error type
+
 int ErrorHandler(int errorType){
+
+        //check which error status number
         switch(errorType){
                 case 1:
                         //can not open output file
@@ -48,25 +50,27 @@ int ErrorHandler(int errorType){
                         break;
                 case 3:
                         fprintf(stderr, 
-				"Error: cannot open name of file\n");
+				"Error: cannot open output file\n");
                         //invalid name
                         break;
                 case 4:
                         fprintf(stderr, 
-				"Error: missing command\n");
+				"Error: command not found\n");
                         //missing command
                         break;
                 case 5:
                         fprintf(stderr, 
-				"Error: enter too much argument\n");
+				"Error: too much argument\n");
                         //too much argument
                         break;
                 case 6:
                         fprintf(stderr, 
-				"Error: missing output file\n");
+				"Error: no output file\n");
                         //missing output file
                         break;
                 case 7:
+                        fprintf(stderr,
+                                "Error: mislocated output redirection");
                         //mislocated output redirection
                         break;
 
@@ -86,11 +90,12 @@ int ErrorHandler(int errorType){
         return 0;
 }
 
-//detect whether user type in exit, if detect, print end message and return 1
+
 int ExitHandler(char* userInput){
-        //check whether user enter exit
-        //if find print end message and return 1, else return 0
+        
+        //check whether contain key word
         if(strstr(userInput, "exit") != NULL){
+                //print exit message
                 fprintf(stderr,"Bye...\n+ completed '%s' [0]\n", userInput);
 		return 1;
 
@@ -109,6 +114,7 @@ int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
                 InverseRedirect(singleCommand);
         }
         
+        //check whther need to redirect 
         RedirectionOutput(singleCommand);
         int ret;
         
@@ -122,70 +128,74 @@ int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
 
 
 
-/*
-*
-*
-*/
+
 void ExecutePipelineCommands(SshellInput *shell){
 
+        //check whether need execute build in command, if execute direct return
         if(ExecuteBuildInCommand(&shell->listOfCommand[0], shell) == 1){
                 return;
         }
         
+
+        //initialize pids and fds
         int pids[COMMAND_MAX_NUM];
-        int fd[COMMAND_MAX_NUM][2];
+        int fds[COMMAND_MAX_NUM][2];
         
-        
+        //set value of fds based on the number of command 
         //if we have three commands, we only need to two pipeline
         for (int i = 0; i < shell->numOfCommand - 1; i++){
-                if(pipe(fd[i]) < 0){
+                if(pipe(fds[i]) < 0){
                         exit(1);
                 }
         }
                 
+        //pipeline start
+        for (int i = 0; i < shell->numOfCommand; i++){
 
-        for (int i = 0; i < shell->numOfCommand; i++)
-        {
+                //initialize pid and fork
                 int pid = fork();
                 if (pid == 0){
-                
+                        //child process
+
+                        //read input from previous command
                         if (i != 0){
-                                dup2(fd[i - 1][0], STDIN_FILENO); 
+                                dup2(fds[i - 1][0], STDIN_FILENO); 
                         }
 
-                        if (i != shell->numOfCommand - 1)
-                        {
-                                dup2(fd[i][1], STDOUT_FILENO);   
+                        //put the result into pipeline
+                        if (i != shell->numOfCommand - 1){
+                                dup2(fds[i][1], STDOUT_FILENO);   
                         }
 
-                        
-                        for (int j = 0; j < shell->numOfCommand - 1; j++)    
-                        {
-                                close(fd[j][0]);
-                                close(fd[j][1]);
+                        //close all the pipelines
+                        for (int j = 0; j < shell->numOfCommand - 1; j++){
+                                close(fds[j][0]);
+                                close(fds[j][1]);
                         }
                         
-                        
+                        //execute command
                         ExecuteCommand(&shell->listOfCommand[i]);
-                        
                         exit(EXIT_FAILURE);
-                }else{
+                }else if(pid > 0){
+                        //store the pid for further wait pid
                         pids[i] = pid;
+                }else if(pid == -1){
+                        //fork fails
+                        return;
                 }
                         
         }
 
-        
-
-        for (int i = 0; i < shell->numOfCommand - 1; i++)       
-        {
-                close(fd[i][0]);
-                close(fd[i][1]);
+        //close all the pipelines
+        for (int i = 0; i < shell->numOfCommand - 1; i++){
+                close(fds[i][0]);
+                close(fds[i][1]);
         }
+
+        //wait all the child end and check exit status
         int status;
         for(int i = 0; i < shell->numOfCommand; i++){
                 waitpid(pids[i],&status, 0);
-                //printf("%d\n", status);
                 if(status != 0){
                         shell->listOfCommand[i].isSuccess = 0;
                 }else{
@@ -199,31 +209,43 @@ void ExecutePipelineCommands(SshellInput *shell){
 }
 
 void InverseRedirect(CommandAndArgument *singleCommand){
+
+        //initialize fd and file name
         int fd;
         char fileName[PATH_MAX_LEN];
+
+        //did not contain symbol <, return 
         if(singleCommand->isInverseRedirect == 0){
                 return;
         }else{
+
+                //find the argument of file name 
                 int indexOfRedirectSign;
                 for(int i = singleCommand->numOfArgument - 1; i > 0; i--){
                         if(strcmp(singleCommand->argument[i], "<") == 0){
                                 indexOfRedirectSign = i;
                         }
                 }
+
+                //missing argument
                 if(indexOfRedirectSign - 1 < 0){
                         return;
                 }
+
+                //missing file name
                 if(singleCommand->argument[indexOfRedirectSign - 1] == NULL){
-                        //missing file name
+                        
                         return;
                 }
 
+                //set file name
                 strcpy(fileName, singleCommand->argument[indexOfRedirectSign + 1]);
                 singleCommand->argument[indexOfRedirectSign] = NULL;
                 singleCommand->argument[indexOfRedirectSign + 1] = NULL;
                 
         }
-        printf("%s", fileName);
+
+        //open file and read it into pipeline
         fd = open(fileName, O_RDWR|O_CREAT);
         if(fd != -1){
                 
@@ -238,29 +260,35 @@ void InverseRedirect(CommandAndArgument *singleCommand){
 
 void RedirectionOutput(CommandAndArgument *singleCommand){
 
+        //initialize fd and file name
         int fd;
         char fileName[PATH_MAX_LEN];
+
+        //did not contain symbol <, return 
         if(singleCommand->isRedirect == 0){
                 return;
         }else{
+                //find the argument of file name 
                 int indexOfRedirectSign;
                 for(int i = singleCommand->numOfArgument - 1; i > 0; i--){
                         if(strcmp(singleCommand->argument[i], ">") == 0){
                                 indexOfRedirectSign = i;
                         }
                 }
+
+                //missing 
                 if(singleCommand->argument[indexOfRedirectSign + 1] == NULL){
                         //missing file name
                         return;
                 }
-
+                //set file name
                 strcpy(fileName, singleCommand->argument[indexOfRedirectSign + 1]);
                 singleCommand->argument[indexOfRedirectSign] = NULL;
                 singleCommand->argument[indexOfRedirectSign + 1] = NULL;
                 
         }
         
-
+        //open file and read it into pipeline
         fd = open(fileName, O_RDWR|O_CREAT);
         if(fd != -1){
                 
@@ -271,10 +299,10 @@ void RedirectionOutput(CommandAndArgument *singleCommand){
         }
 }
 
-//if function find these command "pwd", "cd" return 1
-//this function run the build in command, like cd pwd
-//return 0 if do not execute any command else return 1 return -1 if do not success
+
 int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell){
+
+        //check existence of keyword, if not find return
         if(strstr(singleCommand->command, "pwd") == NULL && 
                 strstr(singleCommand->command, "cd") == NULL &&
                 strstr(singleCommand->command, "dirs") == NULL && 
@@ -285,8 +313,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
 
         }
         
-
-
+        //relocate the position of command and argument
         if(singleCommand->numOfArgument >= 1){
                 char *newArgument = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
                 strcpy(newArgument, singleCommand->command);
@@ -319,81 +346,84 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
         strcpy(singleCommand->command, tempCommand);
 
 
-        //RedirectionOutput(singleCommand);
+        //get pwd
         char *buffer = (char*)malloc(PATH_MAX_LEN);
         getcwd(buffer, PATH_MAX_LEN);
         if(strstr(singleCommand->command, "pwd") != NULL){
-                //getcwd(buffer, PATH_MAX_LEN);
+                //print pwd
                 fprintf(stdout, "%s\n", buffer);
                 singleCommand->isSuccess = 1;
                 return 1;
         }else if(strstr(singleCommand->command, "cd") != NULL){
+                //if do not have path, cd to the home
                 if(singleCommand->numOfArgument == 0){
-                        strcpy(singleCommand->argument[1], "HOME");
+                        singleCommand->argument[1] = 
+                                (char*)malloc(PATH_MAX_LEN * sizeof(char));
+                        strcpy(singleCommand->argument[1], getenv("HOME"));
                 }
-                
-                char* temp = (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
-                //strcat(temp, buffer);
-                //strcat(temp, "/");
-                strcat(temp, singleCommand->argument[1]);
-                strcpy(singleCommand->argument[1], temp);
 
-
-                //printf("%s\n", singleCommand->argument[1]);
+                //cd into directory
                 if(chdir(singleCommand->argument[1]) < 0){
                         //can not cd file
                         ErrorHandler(2);
                         return -1;
                 }
+                //set success flag
                 singleCommand->isSuccess = 1;
                 return 1;
         }
         
         
         if(strstr(singleCommand->command, "dirs") != NULL){
+                //if stack is empty, return 
                 if(shell->directoryStack.numOfDirectory == 0){
                         return 0;
                 }
-                //char *result = (char*)malloc(PATH_MAX_LEN * sizeof(char));
+                //initialize variable 
                 char *result[PATH_MAX_NUM];
                 int index = 0;
+                //initialize temp node for looop
                 Directory *currentDirectory = shell->directoryStack.startDirectory;
 
+                //loop whole stack and push it into result list
                 do{
                         result[index] = (char*)malloc(PATH_MAX_LEN * sizeof(char));
-
                         strcat(result[index], currentDirectory->DirectoryPath);
-                        //strcat(result[index], "\n");
                         index += 1;
-                        //printf("%s\n", currentDirectory->DirectoryPath);
                         currentDirectory = (Directory*)currentDirectory->nextDirectory;
                 }while(currentDirectory == shell->directoryStack.endDirectory);
 
+                //print result
                 for(int i = index - 1; i >= 0; i--){
                         printf("%s\n", result[i]);
                 }
                 
-
-
                 singleCommand->isSuccess = 1;
                 return 1;
 
         }else if(strstr(singleCommand->command, "pushd") != NULL){
+
+                //initialize the directory path
                 char *path = (char*)malloc(PATH_MAX_LEN * sizeof(char));
                 strcat(path, buffer);
                 strcat(path, "/");
                 strcat(path, singleCommand->argument[1]);
+
+                //initialize directory node
                 Directory *newDirectory = (Directory*)malloc(sizeof(Directory));
                 newDirectory->DirectoryPath = (char*)malloc(PATH_MAX_LEN * sizeof(char));
                 strcpy(newDirectory->DirectoryPath, path);
                 newDirectory->nextDirectory = NULL;
-                
                 shell->directoryStack.numOfDirectory += 1;
+
+                //cd into directory
                 if(chdir(path) < 0){
                         //can not cd file
                         ErrorHandler(2);
                         return -1;
                 }
+
+                //push node into stack 
                 if(shell->directoryStack.numOfDirectory == 0){
                         shell->directoryStack.startDirectory = newDirectory;
                         shell->directoryStack.endDirectory = newDirectory;
@@ -406,11 +436,16 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 return 1;
 
         }else if(strstr(singleCommand->command, "popd") != NULL){
+
+                //pop the node and get path name
                 char *path = (char*)malloc(PATH_MAX_LEN * sizeof(char));
                 strcpy(path, shell->directoryStack.startDirectory->DirectoryPath);
-                
+
+                //reset the start node of the list
                 shell->directoryStack.startDirectory = (Directory*)shell->directoryStack.startDirectory->nextDirectory;
                 shell->directoryStack.numOfDirectory -= 1;
+
+                //cd into directory 
                 if(chdir(path) < 0){
                         //can not cd file
                         ErrorHandler(2);
@@ -421,7 +456,6 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
 
         }
 
-        //free(buffer);
         return 0;
 }
 
@@ -462,6 +496,7 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
 
         strcpy(singleCommand->command, tempCommand);
         
+        //call the real execute function
         ExecuteDefinedCommand(singleCommand);
         
 
@@ -471,21 +506,22 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
 
 
 void ViewStart(){
+        //initialize required variable
         char userInput[CMD_MAX_LEN];
         SshellInput shell;
         shell.directoryStack.numOfDirectory = 0;
-        //CommandAndArgument listOfCommand[COMMAND_MAX_NUM];
-        //VariableDictionary listOfVariable;
-        //listOfVariable.numOfVariables = 0;
+
         printf("sshell@ucd$ ");
         fflush(stdout);
+
+
         while(fgets(userInput, CMD_MAX_LEN, stdin) != NULL){
                 printf("%s", userInput);
                 fflush(stdout);
                 //find postion of \n and set it to 0 for deleting 
                 userInput[strcspn(userInput, "\n")] = 0;
 
-                //TODO: may need fix
+                
                 if(ExitHandler(userInput) == 1){
                         exit(0);
                 }
@@ -496,20 +532,15 @@ void ViewStart(){
 
                 //split input to struct CommandAndArgument
                 SplitInput(userInput, shell.listOfCommand, &shell.numOfCommand);
-                /*
-                if(SetVariable(&listOfVariable, &shell) == 0){
-                        RetrieveVariable(&listOfVariable, &shell);
                 
-                        
-                }
-                */
-                
+                //execute the pipeline or directly execute
                 ExecutePipelineCommands(&shell);
+                //print out completed message
                 PrintMessage(&shell);
 
                 printf("sshell@ucd$ ");
                 fflush(stdout);
-                //setbuf(stdin, NULL);
+                
                 
         }
 }
@@ -663,9 +694,6 @@ int RedirectionCommandHandler(char *splitString){
         
         
 }
-
-
-
 
 
 int main(){
