@@ -557,7 +557,7 @@ void ViewStart(){
 
 
         while(fgets(userInput, CMD_MAX_LEN, stdin) != NULL){
-                //printf("%s", userInput);
+                printf("%s", userInput);
                 fflush(stdout);
                 //find postion of \n and set it to 0 for deleting 
                 userInput[strcspn(userInput, "\n")] = 0;
