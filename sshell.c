@@ -390,12 +390,8 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
         
         if(strstr(singleCommand->command, "dirs") != NULL){
                 //if stack is empty, return 
-                printf("%s\n", shell->directoryStack->defaultDirectory->DirectoryPath);
-                singleCommand->isSuccess = 1;
-                if(shell->directoryStack->numOfDirectory == 0){
-
-                        return 1;
-                }
+               
+                
                 //initialize variable 
                 char *result[PATH_MAX_NUM];
                 int index = 0;
@@ -412,7 +408,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                         currentDirectory = 
                                 (Directory*)currentDirectory->nextDirectory;
                 }while(currentDirectory == shell->directoryStack->endDirectory);
-                printf("%s\n", shell->directoryStack->defaultDirectory->DirectoryPath);
+                //printf("%s\n", shell->directoryStack->defaultDirectory->DirectoryPath);
                 //print result
                 for(int i = index - 1; i >= 0; i--){
                         printf("%s\n", result[i]);
@@ -462,7 +458,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
 
         }else if(strstr(singleCommand->command, "popd") != NULL){
 
-                if(shell->directoryStack->numOfDirectory == 0){
+                if(shell->directoryStack->numOfDirectory == 1){
                         singleCommand->isError = 1;
                         ErrorHandler(9);
                         return 1;
@@ -547,12 +543,14 @@ void ViewStart(){
         shell.directoryStack = (DirectoryList*)malloc(sizeof(DirectoryList));
         char *buffer = (char*)malloc(PATH_MAX_LEN);
         getcwd(buffer, PATH_MAX_LEN);
-        shell.directoryStack->defaultDirectory = (Directory*)malloc(sizeof(Directory));
-        shell.directoryStack->defaultDirectory->DirectoryPath = (char*)malloc(PATH_MAX_LEN * sizeof(char));
-        strcpy(shell.directoryStack->defaultDirectory->DirectoryPath, buffer);
-        shell.directoryStack->defaultDirectory->nextDirectory = NULL;
-        
-        shell.directoryStack->numOfDirectory = 0;
+        Directory *newDirectory = (Directory*)malloc(sizeof(Directory));
+        newDirectory->DirectoryPath = 
+                (char*)malloc(PATH_MAX_LEN * sizeof(char));
+        strcpy(newDirectory->DirectoryPath, buffer);
+        newDirectory->nextDirectory = NULL; 
+        shell.directoryStack->startDirectory = newDirectory;
+        shell.directoryStack->endDirectory = newDirectory;
+        shell.directoryStack->numOfDirectory = 1;
         
         printf("sshell@ucd$ ");
         fflush(stdout);
