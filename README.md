@@ -51,7 +51,7 @@ and argument. This function will relocate the position of the argument and add
 command in the argument at first, and then it will open the file and use pipe 
 to set up `STDOUT`. After building this function, we create another function
 called `RedirectionCommandHandler()` to handle special cases such as the symbol
- of `>`and add space in the both side of >. This function handles special 
+ of `>`and add space in the both side of `>`. This function handles special 
 case **xx>xxx**, **xx> xx** ,**xx >xx** and transform them to **xx > xx**.
 
 ### Pipeline Commands
