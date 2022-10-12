@@ -17,7 +17,8 @@ void PrintMessage(SshellInput *shell){
                 if(shell->listOfCommand[i].isSuccess == 1){
                         strcat(result, "[0]");
                 }else{
-                        ErrorHandler(1);
+
+                        
                         strcat(result, "[");
                         strcat(result, &errorIndex);
                         strcat(result, "]");
@@ -80,6 +81,14 @@ int ErrorHandler(int errorType){
 
                         
                         break;
+
+                case 9:
+                        fprintf(stderr, 
+				"Error: directory stack empty\n");
+
+                        
+                        break;
+                        
                 default:
                         fprintf(stderr, 
 				"Error: unknown error\n");
@@ -197,6 +206,7 @@ void ExecutePipelineCommands(SshellInput *shell){
         for(int i = 0; i < shell->numOfCommand; i++){
                 waitpid(pids[i],&status, 0);
                 if(status != 0){
+                        ErrorHandler(1);
                         shell->listOfCommand[i].isSuccess = 0;
                 }else{
                         
@@ -380,8 +390,11 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
         
         if(strstr(singleCommand->command, "dirs") != NULL){
                 //if stack is empty, return 
+                printf("%s\n", shell->directoryStack->defaultDirectory->DirectoryPath);
+                singleCommand->isSuccess = 1;
                 if(shell->directoryStack->numOfDirectory == 0){
-                        return 0;
+
+                        return 1;
                 }
                 //initialize variable 
                 char *result[PATH_MAX_NUM];
@@ -389,7 +402,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 //initialize temp node for looop
                 Directory *currentDirectory = 
                         shell->directoryStack->startDirectory;
-
+                
                 //loop whole stack and push it into result list
                 do{
                         result[index] = 
@@ -399,7 +412,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                         currentDirectory = 
                                 (Directory*)currentDirectory->nextDirectory;
                 }while(currentDirectory == shell->directoryStack->endDirectory);
-
+                printf("%s\n", shell->directoryStack->defaultDirectory->DirectoryPath);
                 //print result
                 for(int i = index - 1; i >= 0; i--){
                         printf("%s\n", result[i]);
@@ -448,6 +461,12 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 return 1;
 
         }else if(strstr(singleCommand->command, "popd") != NULL){
+
+                if(shell->directoryStack->numOfDirectory == 0){
+                        singleCommand->isError = 1;
+                        ErrorHandler(9);
+                        return 1;
+                }
 
                 //pop the node and get path name
                 char *path = (char*)malloc(PATH_MAX_LEN * sizeof(char));
@@ -526,6 +545,13 @@ void ViewStart(){
         char userInput[CMD_MAX_LEN];
         SshellInput shell;
         shell.directoryStack = (DirectoryList*)malloc(sizeof(DirectoryList));
+        char *buffer = (char*)malloc(PATH_MAX_LEN);
+        getcwd(buffer, PATH_MAX_LEN);
+        shell.directoryStack->defaultDirectory = (Directory*)malloc(sizeof(Directory));
+        shell.directoryStack->defaultDirectory->DirectoryPath = (char*)malloc(PATH_MAX_LEN * sizeof(char));
+        strcpy(shell.directoryStack->defaultDirectory->DirectoryPath, buffer);
+        shell.directoryStack->defaultDirectory->nextDirectory = NULL;
+        
         shell.directoryStack->numOfDirectory = 0;
         
         printf("sshell@ucd$ ");

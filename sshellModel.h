@@ -38,6 +38,7 @@ typedef struct{
         int numOfDirectory; //number of directory store in the struct
         Directory *startDirectory; //start node of list
         Directory *endDirectory; //end node of the list
+        Directory *defaultDirectory;
 }DirectoryList;
 
 //main struct include list of command and stack of directory
