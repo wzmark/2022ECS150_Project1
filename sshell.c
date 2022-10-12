@@ -105,7 +105,7 @@ int ExitHandler(char* userInput){
         //check whether contain key word
         if(strstr(userInput, "exit") != NULL){
                 //print exit message
-                fprintf(stderr,"Bye...\n");
+                fprintf(stderr,"Bye...\n+ completed '%s' [0]\n", userInput);
 		return 1;
 
         }else{
