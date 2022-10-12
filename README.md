@@ -72,7 +72,7 @@ open file and read the data from file. This function will relocate the position
 of the argument and add command in the argument, after that, this function
 will open the file and use pipe to read the data. The second function is 
 called `InverseRedirectionCommandHandler()`, which will detect the symbol 
-of **<** and add space in the both side of **>**. This function handles 
+of `<` and add space in the both side of `>`. This function handles 
 special case **xx< xxx**, **xx< xx**,**xx< xx** and transform them to
 **xx > xx**.
 
