@@ -380,7 +380,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
         
         if(strstr(singleCommand->command, "dirs") != NULL){
                 //if stack is empty, return 
-                if(shell->directoryStack.numOfDirectory == 0){
+                if(shell->directoryStack->numOfDirectory == 0){
                         return 0;
                 }
                 //initialize variable 
@@ -388,7 +388,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 int index = 0;
                 //initialize temp node for looop
                 Directory *currentDirectory = 
-                        shell->directoryStack.startDirectory;
+                        shell->directoryStack->startDirectory;
 
                 //loop whole stack and push it into result list
                 do{
@@ -398,7 +398,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                         index += 1;
                         currentDirectory = 
                                 (Directory*)currentDirectory->nextDirectory;
-                }while(currentDirectory == shell->directoryStack.endDirectory);
+                }while(currentDirectory == shell->directoryStack->endDirectory);
 
                 //print result
                 for(int i = index - 1; i >= 0; i--){
@@ -422,7 +422,7 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                         (char*)malloc(PATH_MAX_LEN * sizeof(char));
                 strcpy(newDirectory->DirectoryPath, path);
                 newDirectory->nextDirectory = NULL;
-                shell->directoryStack.numOfDirectory += 1;
+                
 
                 //cd into directory
                 if(chdir(path) < 0){
@@ -432,15 +432,18 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 }
 
                 //push node into stack 
-                if(shell->directoryStack.numOfDirectory == 0){
-                        shell->directoryStack.startDirectory = newDirectory;
-                        shell->directoryStack.endDirectory = newDirectory;
+                if(shell->directoryStack->numOfDirectory == 0){
+                        shell->directoryStack->startDirectory = (Directory*)malloc(sizeof(Directory));
+                        shell->directoryStack->endDirectory = (Directory*)malloc(sizeof(Directory));
+                        shell->directoryStack->startDirectory = newDirectory;
+                        shell->directoryStack->endDirectory = newDirectory;
                 }else{
-                        shell->directoryStack.endDirectory->nextDirectory = 
+                        shell->directoryStack->endDirectory->nextDirectory = 
                                 (struct Directory*)newDirectory;
-                        shell->directoryStack.endDirectory = newDirectory;
+                        shell->directoryStack->endDirectory = newDirectory;
                         
                 }
+                shell->directoryStack->numOfDirectory += 1;
                 singleCommand->isSuccess = 1;
                 return 1;
 
@@ -448,13 +451,13 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
 
                 //pop the node and get path name
                 char *path = (char*)malloc(PATH_MAX_LEN * sizeof(char));
-                strcpy(path, shell->directoryStack.startDirectory->DirectoryPath);
+                strcpy(path, shell->directoryStack->startDirectory->DirectoryPath);
 
                 //reset the start node of the list
-                shell->directoryStack.startDirectory = 
+                shell->directoryStack->startDirectory = 
                         (Directory*)shell->
-                                directoryStack.startDirectory->nextDirectory;
-                shell->directoryStack.numOfDirectory -= 1;
+                                directoryStack->startDirectory->nextDirectory;
+                shell->directoryStack->numOfDirectory -= 1;
 
                 //cd into directory 
                 if(chdir(path) < 0){
@@ -522,8 +525,9 @@ void ViewStart(){
         //initialize required variable
         char userInput[CMD_MAX_LEN];
         SshellInput shell;
-        shell.directoryStack.numOfDirectory = 0;
-
+        shell.directoryStack = (DirectoryList*)malloc(sizeof(DirectoryList));
+        shell.directoryStack->numOfDirectory = 0;
+        
         printf("sshell@ucd$ ");
         fflush(stdout);
 

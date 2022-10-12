@@ -43,7 +43,7 @@ typedef struct{
 //main struct include list of command and stack of directory
 typedef struct{
     CommandAndArgument listOfCommand[COMMAND_MAX_NUM]; //store split commnad and argument
-    DirectoryList directoryStack; //stack of the directory
+    DirectoryList *directoryStack; //stack of the directory
     int numOfCommand; //number of command
     char* savedCommand; //store the userInput
 }SshellInput;
