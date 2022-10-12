@@ -553,7 +553,7 @@ void ViewStart(){
         shell.directoryStack->numOfDirectory = 1;
         
         printf("sshell@ucd$ ");
-        fflush(stdout);
+        //fflush(stdout);
 
 
         while(fgets(userInput, CMD_MAX_LEN, stdin) != NULL){
