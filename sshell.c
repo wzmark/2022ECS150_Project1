@@ -328,19 +328,21 @@ void ExecutePipelineCommands(SshellInput *shell){
                         //child process
 
                         //read input from previous command
-                        if (i != 0){
+                        if (i - 1 >= 0){
                                 dup2(fds[i - 1][0], STDIN_FILENO); 
                         }
 
                         //put the result into pipeline
-                        if (i != shell->numOfCommand - 1){
+                        if (i + 1 <= shell->numOfCommand - 1){
                                 dup2(fds[i][1], STDOUT_FILENO);   
                         }
 
                         //close all the pipelines
                         for (int j = 0; j < shell->numOfCommand - 1; j++){
-                                close(fds[j][0]);
-                                close(fds[j][1]);
+                                if(close(fds[j][0]) + close(fds[j][1]) != 0){
+                                        exit(1);
+                                }
+                               
                         }
                         
                         //execute command
@@ -355,13 +357,14 @@ void ExecutePipelineCommands(SshellInput *shell){
                 }
                         
         }
-
+        
         //close all the pipelines
         for (int i = 0; i < shell->numOfCommand - 1; i++){
-                close(fds[i][0]);
-                close(fds[i][1]);
+                if(close(fds[i][0]) + close(fds[i][1]) != 0){
+                        exit(1);
+                }
         }
-
+        
         //wait all the child end and check exit status
         int status;
         for(int i = 0; i < shell->numOfCommand; i++){
