@@ -1,104 +1,97 @@
 #include "sshell.h"
 
 
-void PrintMessage(SshellInput *shell){
+int main(){
+        //program start 
+        ViewStart();  
+}
 
-        //initialize the completed message
-        char* result = (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
-        strcpy(result,  "+ completed '");
-        strcat(result, shell->savedCommand);
-        strcat(result, "' ");
 
-        //set error index
-        for(int i = 0; i < shell->numOfCommand; i++){
+void ViewStart(){
+        //initialize required variable
+        char userInput[CMD_MAX_LEN];
+        SshellInput shell;
+
+        //create steak of directory
+        shell.directoryStack = (DirectoryList*)malloc(sizeof(DirectoryList));
+        //get current path
+        char *buffer = (char*)malloc(PATH_MAX_LEN);
+        getcwd(buffer, PATH_MAX_LEN);
+        //push current path to the steak of directory
+        Directory *newDirectory = (Directory*)malloc(sizeof(Directory));
+        newDirectory->DirectoryPath = 
+                (char*)malloc(PATH_MAX_LEN * sizeof(char));
+        strcpy(newDirectory->DirectoryPath, buffer);
+        newDirectory->nextDirectory = NULL; 
+        shell.directoryStack->startDirectory = newDirectory;
+        shell.directoryStack->endDirectory = newDirectory;
+        shell.directoryStack->numOfDirectory = 1;
+        
+        printf("sshell@ucd$ ");
+       
+        while(fgets(userInput, CMD_MAX_LEN, stdin) != NULL){
+                printf("%s", userInput);
+                fflush(stdout);
+                //find postion of \n and set it to 0 for deleting 
+                userInput[strcspn(userInput, "\n")] = 0;
+
                 
-                char errorIndex =  (char)((i + 1) + '0');
-                //check the isSuccess in the CommandAndArgument
-                if(shell->listOfCommand[i].isSuccess == 1){
-                        strcat(result, "[0]");
-                }else{
-
+                if(ExitHandler(userInput) == 1){
                         
-                        strcat(result, "[");
-                        strcat(result, &errorIndex);
-                        strcat(result, "]");
+                        exit(0);
                 }
+
+                //backup user input for final print result
+                shell.savedCommand = 
+                        (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
+                strcpy(shell.savedCommand, userInput);
+
+                //split input to struct CommandAndArgument
+                SplitInput(userInput, shell.listOfCommand, &shell.numOfCommand);
+                
+                //detect whether occur parsing error
+                int isError = 0;
+                for(int i = 0; i < shell.numOfCommand; i++){
+                        if(shell.listOfCommand[i].isError == 1){
+                                isError = 1;
+                        }
+                }
+                
+                if(isError == 0){
+                        //execute the pipeline or directly execute
+                        ExecutePipelineCommands(&shell);
+                        //print out completed message
+                        PrintMessage(&shell);
+                }
+
+                //reset whole data of command and argument
+                for(int i = 0; i < shell.numOfCommand; i++){
+                        free(shell.listOfCommand[i].command);
+
+                        int minNum;
+                        if(ARGUMENT_MAX_NUM < shell.listOfCommand[i].numOfArgument){
+                                minNum = ARGUMENT_MAX_NUM;
+                        }else{
+                                minNum = shell.listOfCommand[i].numOfArgument;
+                        }
+                        for(int j = 0; j < minNum; j++){
+                                free(shell.listOfCommand[i].argument[j]);
+                        }
+                        shell.listOfCommand[i].numOfArgument = 0; 
+                        shell.listOfCommand[i].isRedirect = -1;
+                        shell.listOfCommand[i].isSuccess = -1; 
+                        shell.listOfCommand[i].isInverseRedirect = -1;
+                        shell.listOfCommand[i].isError = -1; 
+                }
+                
+                shell.numOfCommand = 0;
+                
+                printf("sshell@ucd$ ");
+                fflush(stdout);
+                
+                
         }
-        strcat(result, "\n");
-        //print complete message
-        fprintf(stderr, "%s", result);
-        fflush(stdout);
 }
-
-
-
-
-int ErrorHandler(int errorType){
-
-        //check which error status number
-        switch(errorType){
-                case 1:
-                        //can not open output file
-                        fprintf(stderr, 
-				"Error: command not found\n");
-                        
-                        break;
-                case 2:
-                        //can not cd
-                        fprintf(stderr, 
-				"Error: cannot cd file\n");
-                        
-                        break;
-                case 3:
-                        fprintf(stderr, 
-				"Error: cannot open output file\n");
-                        //invalid name
-                        break;
-                case 4:
-                        fprintf(stderr, 
-				"Error: missing command\n");
-                        //missing command
-                        break;
-                case 5:
-                        fprintf(stderr, 
-				"Error: too many process arguments\n");
-                        //too much argument
-                        break;
-                case 6:
-                        fprintf(stderr, 
-				"Error: no output file\n");
-                        //missing output file
-                        break;
-                case 7:
-                        fprintf(stderr,
-                                "Error: mislocated output redirection\n");
-                        //mislocated output redirection
-                        break;
-
-                case 8:
-                        fprintf(stderr, 
-				"Error: missing command\n");
-
-                        
-                        break;
-
-                case 9:
-                        fprintf(stderr, 
-				"Error: directory stack empty\n");
-
-                        
-                        break;
-                        
-                default:
-                        fprintf(stderr, 
-				"Error: unknown error\n");
-                        break;
-                        
-        }
-        fflush(stdout);
-        return 0;
-}
-
 
 int ExitHandler(char* userInput){
         
@@ -113,30 +106,199 @@ int ExitHandler(char* userInput){
         }
 }
 
-
-
-//accept a single command struct and return if falure 
-int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
+void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
+        int *numOfCommand){
         
-        //check whether has inverse redirect if yes, call inverse redirect func
-        if(singleCommand->isInverseRedirect == 1){
-                InverseRedirect(singleCommand);
+        //store commands from echo 123|tr 2 1 to "echo 123", "tr 2 1"
+        char listOfTempString[COMMAND_MAX_NUM][COMMAND_MAX_LEN];
+        char* splitString;
+        
+        char splitChar[2] = "|";
+        //if find command set to 1, reset to zero after meet '|'
+        int isFindCommand = 0;
+        int numOfPipeline = 0;
+        //if command is redirect, set to 1
+        
+        for(unsigned long i = 0; i < strlen(userInput); i++){
+                char tempCharacter = userInput[i];
+                if(tempCharacter == '|'){
+                        numOfPipeline += 1;
+                }
+        }
+
+        //split whole pipeline in to seperate command
+        int index = 0;
+        splitString = strtok(userInput, splitChar);
+        while(splitString != NULL){
+                strcpy(listOfTempString[index],splitString);
+                
+                index++;
+                splitString = strtok(NULL, splitChar);
+        }
+        //set num of command from how many times while loop go
+        *numOfCommand = index;
+
+        //split single combo of command and argument
+        *splitChar = ' ';
+        int numOfArgument = 0;
+        //first loop is for number of combos
+        for(int i = 0; i < index; i++){
+                
+                if(listOfTempString[i] == NULL){
+                        ErrorHandler(ERR_MISS_COMMAND);
+                        listOfCommand[i].isError = 1;
+                }
+                
+                //check whether contain redirection or inverse redirection
+                int flag = RedirectionCommandHandler(listOfTempString[i]);
+                if(flag == 1){
+                        listOfCommand[i].isRedirect = 1;
+                }else if(flag == 0){
+                        listOfCommand[i].isRedirect = 0;
+                }
+                flag = InverseRedirectionCommandHandler(listOfTempString[i]);
+                if(flag == 1){
+                        listOfCommand[i].isInverseRedirect = 1;
+                }else if(flag == 0){
+                        listOfCommand[i].isInverseRedirect = 0;
+                }
+
+                //split the input by empty space
+                splitString = strtok(listOfTempString[i], splitChar);         
+                while(splitString != NULL){
+                        
+                        if(isFindCommand == 0){
+                                isFindCommand = 1; //find command
+                                //put command in the struct
+                                listOfCommand[i].command = 
+                                        (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
+                                strcpy(listOfCommand[i].command, splitString);
+                                
+                                
+                        }else{
+                                //put argument in the struct
+                                listOfCommand[i].argument[numOfArgument] = 
+                                        (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
+                                strcpy(listOfCommand[i].argument[numOfArgument], splitString);
+                                numOfArgument++; 
+                        }
+                        
+                        splitString = strtok(NULL, splitChar);
+                }
+
+                //missing command before or after pipeline
+                if(numOfPipeline != (index - 1)){
+                        listOfCommand[i].isError = 1;
+                        ErrorHandler(ERR_MISS_COMMAND);
+                }
+                
+                //check whether too much arguments
+                if(numOfArgument > 10){
+                        listOfCommand[i].isError = 1;
+                        ErrorHandler(ERR_TOOMANY_ARG);
+                }
+
+                //missing command before or after redirection
+                if(strcmp(listOfCommand[i].command, ">") == 0 || 
+                                strcmp(listOfCommand[i].command, "<") == 0){
+
+                        listOfCommand[i].isError = 1;
+                        ErrorHandler(ERR_MISS_COMMAND);
+                }
+
+                //check errror about missing output file or mislocate redirection
+                for(int j = 0; j < numOfArgument; j++){
+                        if(strcmp(listOfCommand[i].argument[j], ">") == 0 || 
+                                strcmp(listOfCommand[i].argument[j], "<") == 0){
+
+                                if(j + 2 > numOfArgument){
+                                        ErrorHandler(ERR_OUTPUT_FILE);
+                                        listOfCommand[i].isError = 1;
+                                }
+                                if(i != numOfPipeline){
+                                        ErrorHandler(ERR_MISLOCATE_REDIR);
+                                        listOfCommand[i].isError = 1;
+                                }
+                                
+                        }
+                }
+
+                listOfCommand[i].numOfArgument = numOfArgument;
+                isFindCommand = 0; //reset isFindCommand for next loop
+                numOfArgument = 0;
+                
         }
         
-        //check whther need to redirect 
-        RedirectionOutput(singleCommand);
-        int ret;
+
+}
+
+//check whether exist redirection
+int RedirectionCommandHandler(char *splitString){
+        //handle special case xx>xxx, xx> xx ,xx >xx
+        //transform them to the xx > xx
+        //return 1 if find > else return 0
+
+        //initialize var for front part and back part whether they exist
+        char *finalString = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));     
+        char *subString;
+        if(strchr(splitString, '>') == NULL){
+                //check whether can find >, if do not find return
+                return 0;
+        }else{
+                //echo 123>file to echo 123 > file
+                subString = strtok(splitString, ">");
+                int flag = 0; //first loop flag
+                
+
+                while(subString != NULL){
+                        
+                        strcat(finalString, subString);
+                        if(flag == 0){
+                                strcat(finalString, " > ");
+                                flag = 1;
+                        }
+                        subString = strtok(NULL, ">");
+                }
+                
+                strcpy(splitString, finalString);
+                return 1;
+        }
+
         
-        //exeute command and command
-        ret = execvp(singleCommand->command, singleCommand->argument);
-        
-        //only reach this line when execute fail
-        exit(EXIT_FAILURE);
-        return ret;
 }
 
 
+int InverseRedirectionCommandHandler(char *splitString){
+        //handle special case xx>xxx, xx> xx ,xx >xx
+        //transform them to the xx > xx
+        //
 
+        //initialize var for front part and back part whether they exist
+        char *finalString = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));     
+        char *subString;
+        if(strchr(splitString, '<') == NULL){
+                //check whether can find >, if do not find return
+                return 0;
+        }else{
+                //echo 123>file to echo 123 > file
+                subString = strtok(splitString, "<");
+                int flag = 0; //first loop flag
+                
+                while(subString != NULL){
+                        
+                        strcat(finalString, subString);
+                        if(flag == 0){
+                                strcat(finalString, " < ");
+                                flag = 1;
+                        }
+                        subString = strtok(NULL, "<");
+                }
+                      
+                strcpy(splitString, finalString);
+                return 1;
+        } 
+        
+}
 
 void ExecutePipelineCommands(SshellInput *shell){
 
@@ -145,7 +307,6 @@ void ExecutePipelineCommands(SshellInput *shell){
                 return;
         }
         
-
         //initialize pids and fds
         int pids[COMMAND_MAX_NUM];
         int fds[COMMAND_MAX_NUM][2];
@@ -206,7 +367,7 @@ void ExecutePipelineCommands(SshellInput *shell){
         for(int i = 0; i < shell->numOfCommand; i++){
                 waitpid(pids[i],&status, 0);
                 if(status != 0){
-                        ErrorHandler(1);
+                        
                         shell->listOfCommand[i].isSuccess = 0;
                 }else{
                         
@@ -217,100 +378,6 @@ void ExecutePipelineCommands(SshellInput *shell){
         
         
 }
-
-void InverseRedirect(CommandAndArgument *singleCommand){
-
-        //initialize fd and file name
-        int fd;
-        char fileName[PATH_MAX_LEN];
-
-        //did not contain symbol <, return 
-        if(singleCommand->isInverseRedirect == 0){
-                return;
-        }else{
-
-                //find the argument of file name 
-                int indexOfRedirectSign;
-                for(int i = singleCommand->numOfArgument - 1; i > 0; i--){
-                        if(strcmp(singleCommand->argument[i], "<") == 0){
-                                indexOfRedirectSign = i;
-                        }
-                }
-
-                //missing argument
-                if(indexOfRedirectSign - 1 < 0){
-                        return;
-                }
-
-                //missing file name
-                if(singleCommand->argument[indexOfRedirectSign - 1] == NULL){
-                        
-                        return;
-                }
-
-                //set file name
-                strcpy(fileName, singleCommand->argument[indexOfRedirectSign + 1]);
-                singleCommand->argument[indexOfRedirectSign] = NULL;
-                singleCommand->argument[indexOfRedirectSign + 1] = NULL;
-                
-        }
-
-        //open file and read it into pipeline
-        fd = open(fileName, O_RDWR|O_CREAT);
-        if(fd != -1){
-                
-                dup2(fd, STDIN_FILENO);
-                close(fd);
-        }else{
-                ErrorHandler(3);
-                singleCommand->isSuccess = 0;
-        }
-
-}
-
-
-void RedirectionOutput(CommandAndArgument *singleCommand){
-
-        //initialize fd and file name
-        int fd;
-        char fileName[PATH_MAX_LEN];
-
-        //did not contain symbol <, return 
-        if(singleCommand->isRedirect == 0){
-                return;
-        }else{
-                //find the argument of file name 
-                int indexOfRedirectSign;
-                for(int i = singleCommand->numOfArgument - 1; i > 0; i--){
-                        if(strcmp(singleCommand->argument[i], ">") == 0){
-                                indexOfRedirectSign = i;
-                        }
-                }
-
-                //missing 
-                if(singleCommand->argument[indexOfRedirectSign + 1] == NULL){
-                        //missing file name
-                        return;
-                }
-                //set file name
-                strcpy(fileName, singleCommand->argument[indexOfRedirectSign + 1]);
-                singleCommand->argument[indexOfRedirectSign] = NULL;
-                singleCommand->argument[indexOfRedirectSign + 1] = NULL;
-                
-        }
-        
-        //open file and read it into pipeline
-        fd = open(fileName, O_RDWR|O_CREAT);
-        if(fd != -1){
-                
-                dup2(fd, STDOUT_FILENO);
-                close(fd);
-        }else{
-                ErrorHandler(3);
-                singleCommand->isSuccess = 0;
-        }
-}
-
 
 int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell){
 
@@ -351,6 +418,15 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                                 singleCommand->argument[i] = NULL;
                         }  
                 }
+        }else if(singleCommand->numOfArgument == 0){
+                //move command for condition no argument
+                singleCommand->argument[0] = (char*)malloc(
+                                        ARGUMENT_MAX_LEN  * sizeof(char));
+                singleCommand->argument[1] = (char*)malloc(
+                                        ARGUMENT_MAX_LEN  * sizeof(char));
+                strcpy(singleCommand->argument[0], singleCommand->command);
+                singleCommand->argument[1] = NULL;
+
         }
         char *tempCommand = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
         strcpy(tempCommand, "");
@@ -379,7 +455,8 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 //cd into directory
                 if(chdir(singleCommand->argument[1]) < 0){
                         //can not cd file
-                        ErrorHandler(2);
+                        singleCommand->isError = 1;
+                        ErrorHandler(ERR_CD_DIR);
                         return -1;
                 }
                 //set success flag
@@ -436,7 +513,8 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
                 //cd into directory
                 if(chdir(path) < 0){
                         //can not cd file
-                        ErrorHandler(2);
+                        singleCommand->isError = 1;
+                        ErrorHandler(ERR_CD_DIR);
                         return -1;
                 }
 
@@ -460,24 +538,29 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
 
                 if(shell->directoryStack->numOfDirectory == 1){
                         singleCommand->isError = 1;
-                        ErrorHandler(9);
+                        ErrorHandler(ERR_STACK_EMPTY);
                         return 1;
                 }
 
                 //pop the node and get path name
                 char *path = (char*)malloc(PATH_MAX_LEN * sizeof(char));
                 strcpy(path, shell->directoryStack->startDirectory->DirectoryPath);
+                //save address for free
+                Directory *savedDirectory = shell->directoryStack->startDirectory;
+                
 
                 //reset the start node of the list
                 shell->directoryStack->startDirectory = 
                         (Directory*)shell->
                                 directoryStack->startDirectory->nextDirectory;
                 shell->directoryStack->numOfDirectory -= 1;
-
+                //free old node
+                free(savedDirectory);
                 //cd into directory 
                 if(chdir(path) < 0){
                         //can not cd file
-                        ErrorHandler(2);
+                        singleCommand->isError = 1;
+                        ErrorHandler(ERR_CD_DIR);
                         return -1;
                 }
                 singleCommand->isSuccess = 1;
@@ -487,7 +570,6 @@ int ExecuteBuildInCommand(CommandAndArgument *singleCommand, SshellInput *shell)
 
         return 0;
 }
-
 
 
 void ExecuteCommand(CommandAndArgument *singleCommand){
@@ -519,6 +601,7 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
                         }  
                 }
         }else if(singleCommand->numOfArgument == 0){
+                //move command for condition no argument
                 singleCommand->argument[0] = (char*)malloc(
                                         ARGUMENT_MAX_LEN  * sizeof(char));
                 singleCommand->argument[1] = (char*)malloc(
@@ -527,6 +610,8 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
                 singleCommand->argument[1] = NULL;
 
         }
+
+
         //printf("%s %s\n", singleCommand->command, singleCommand->argument[0]);
         char *tempCommand = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
         strcpy(tempCommand, "");
@@ -538,295 +623,238 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
         //call the real execute function
         ExecuteDefinedCommand(singleCommand);
         
-
-        
-        
 }
 
 
-void ViewStart(){
-        //initialize required variable
-        char userInput[CMD_MAX_LEN];
-        SshellInput shell;
-        shell.directoryStack = (DirectoryList*)malloc(sizeof(DirectoryList));
-        char *buffer = (char*)malloc(PATH_MAX_LEN);
-        getcwd(buffer, PATH_MAX_LEN);
-        Directory *newDirectory = (Directory*)malloc(sizeof(Directory));
-        newDirectory->DirectoryPath = 
-                (char*)malloc(PATH_MAX_LEN * sizeof(char));
-        strcpy(newDirectory->DirectoryPath, buffer);
-        newDirectory->nextDirectory = NULL; 
-        shell.directoryStack->startDirectory = newDirectory;
-        shell.directoryStack->endDirectory = newDirectory;
-        shell.directoryStack->numOfDirectory = 1;
-        
-        printf("sshell@ucd$ ");
-        //fflush(stdout);
 
 
-        while(fgets(userInput, CMD_MAX_LEN, stdin) != NULL){
-                printf("%s", userInput);
-                fflush(stdout);
-                //find postion of \n and set it to 0 for deleting 
-                userInput[strcspn(userInput, "\n")] = 0;
-
-                
-                if(ExitHandler(userInput) == 1){
-                        exit(0);
-                }
-
-                //backup user input for final print result
-                shell.savedCommand = 
-                        (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
-                strcpy(shell.savedCommand, userInput);
-
-                //split input to struct CommandAndArgument
-                SplitInput(userInput, shell.listOfCommand, &shell.numOfCommand);
-                
-                //detect whether occur parsing error
-                int isError = 0;
-                for(int i = 0; i < shell.numOfCommand; i++){
-                        if(shell.listOfCommand[i].isError == 1){
-                                isError = 1;
-                        }
-                }
-                
-                if(isError == 0){
-                        //execute the pipeline or directly execute
-                        ExecutePipelineCommands(&shell);
-                        //print out completed message
-                        PrintMessage(&shell);
-                }
-
-                //reset whole data of command and argument
-                for(int i = 0; i < shell.numOfCommand; i++){
-                        free(shell.listOfCommand[i].command);
-
-                        int minNum;
-                        if(ARGUMENT_MAX_NUM < shell.listOfCommand[i].numOfArgument){
-                                minNum = ARGUMENT_MAX_NUM;
-                        }else{
-                                minNum = shell.listOfCommand[i].numOfArgument;
-                        }
-                        for(int j = 0; j < minNum; j++){
-                                free(shell.listOfCommand[i].argument[j]);
-                        }
-                        shell.listOfCommand[i].numOfArgument = 0; 
-                        shell.listOfCommand[i].isRedirect = -1;
-                        shell.listOfCommand[i].isSuccess = -1; 
-                        shell.listOfCommand[i].isInverseRedirect = -1;
-                        shell.listOfCommand[i].isError = -1; 
-                }
-                
-                shell.numOfCommand = 0;
-                
-                printf("sshell@ucd$ ");
-                fflush(stdout);
-                
-                
+//accept a single command struct and return if falure 
+int ExecuteDefinedCommand(CommandAndArgument *singleCommand){
+        int ret;
+        //check whether has inverse redirect if yes, call inverse redirect func
+        if(singleCommand->isInverseRedirect == 1){
+                InverseRedirect(singleCommand);
         }
+        
+        //check whther need to redirect 
+        RedirectionOutput(singleCommand);
+        if(singleCommand->isError != 1){
+               
+        
+                //exeute command and command
+                ret = execvp(singleCommand->command, singleCommand->argument);
+                ErrorHandler(ERR_CMD_NOTFOUND);
+        }
+
+        
+        
+        //only reach this line when execute fail
+        exit(EXIT_FAILURE);
+        return ret;
 }
 
-void SplitInput(char userInput[CMD_MAX_LEN], CommandAndArgument *listOfCommand, 
-        int *numOfCommand){
-        
-        //store commands from echo 123|tr 2 1 to "echo 123", "tr 2 1"
-        char listOfTempString[COMMAND_MAX_NUM][COMMAND_MAX_LEN];
-        char* splitString;
-        
-        char splitChar[2] = "|";
-        //if find command set to 1, reset to zero after meet '|'
-        int isFindCommand = 0;
-        int numOfPipeline = 0;
-        //if command is redirect, set to 1
-        
-        for(unsigned long i = 0; i < strlen(userInput); i++){
-                char tempCharacter = userInput[i];
-                if(tempCharacter == '|'){
-                        numOfPipeline += 1;
-                }
-        }
 
-        //split whole pipeline in to seperate command
-        int index = 0;
-        splitString = strtok(userInput, splitChar);
-        while(splitString != NULL){
-                strcpy(listOfTempString[index],splitString);
+
+
+void PrintMessage(SshellInput *shell){
+
+        //initialize the completed message
+        char* result = (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
+        strcpy(result,  "+ completed '");
+        strcat(result, shell->savedCommand);
+        strcat(result, "' ");
+
+        //set error index
+        for(int i = 0; i < shell->numOfCommand; i++){
                 
-                index++;
-                splitString = strtok(NULL, splitChar);
-        }
-        //set num of command from how many times while loop go
-        *numOfCommand = index;
+                char errorIndex =  (char)((i + 1) + '0');
+                //check the isSuccess in the CommandAndArgument
+                if(shell->listOfCommand[i].isSuccess == 1){
+                        strcat(result, "[0]");
+                }else{
 
-        //split single combo of command and argument
-        *splitChar = ' ';
-        int numOfArgument = 0;
-        //first loop is for number of combos
-        for(int i = 0; i < index; i++){
-
-                if(listOfTempString[i] == NULL){
-                        ErrorHandler(8);
-                        listOfCommand[i].isError = 1;
-                }
-                
-                int flag = RedirectionCommandHandler(listOfTempString[i]);
-                if(flag == 1){
-                        listOfCommand[i].isRedirect = 1;
-                }else if(flag == 0){
-                        listOfCommand[i].isRedirect = 0;
-                }
-
-                flag = InverseRedirectionCommandHandler(listOfTempString[i]);
-                if(flag == 1){
-                        listOfCommand[i].isInverseRedirect = 1;
-                }else if(flag == 0){
-                        listOfCommand[i].isInverseRedirect = 0;
-                }
-
-                
-                splitString = strtok(listOfTempString[i], splitChar);
-                
-                while(splitString != NULL){
                         
-                        if(isFindCommand == 0){
-                                isFindCommand = 1; //find command
-                                
-                                listOfCommand[i].command = 
-                                        (char*)malloc(COMMAND_MAX_LEN * sizeof(char));
-                                strcpy(listOfCommand[i].command, splitString);
-                                
-                                
-                        }else{
-                                
-                                listOfCommand[i].argument[numOfArgument] = 
-                                        (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
-                                strcpy(listOfCommand[i].argument[numOfArgument], splitString);
-                                numOfArgument++; 
-                        }
-                        
-                        splitString = strtok(NULL, splitChar);
+                        strcat(result, "[");
+                        strcat(result, &errorIndex);
+                        strcat(result, "]");
                 }
-
-                if(numOfPipeline != (index - 1)){
-                        listOfCommand[i].isError = 1;
-                        ErrorHandler(4);
-                }
-                
-                //check whether too much arguments
-                if(numOfArgument > 10){
-                        listOfCommand[i].isError = 1;
-                        ErrorHandler(5);
-                }
-
-                if(strcmp(listOfCommand[i].command, ">") == 0 || 
-                                strcmp(listOfCommand[i].command, "<") == 0){
-
-                        listOfCommand[i].isError = 1;
-                        ErrorHandler(4);
-                }
-
-                for(int j = 0; j < numOfArgument; j++){
-                        if(strcmp(listOfCommand[i].argument[j], ">") == 0 || 
-                                strcmp(listOfCommand[i].argument[j], "<") == 0){
-
-                                if(j + 2 > numOfArgument){
-                                        ErrorHandler(6);
-                                        listOfCommand[i].isError = 1;
-                                }
-                                if(i != numOfPipeline){
-                                        ErrorHandler(7);
-                                        listOfCommand[i].isError = 1;
-                                }
-                                
-                        }
-                }
-
-                listOfCommand[i].numOfArgument = numOfArgument;
-                isFindCommand = 0; //reset isFindCommand for next loop
-                numOfArgument = 0;
-                
         }
-        
-
+        strcat(result, "\n");
+        //print complete message
+        fprintf(stderr, "%s", result);
+        fflush(stdout);
 }
 
-int InverseRedirectionCommandHandler(char *splitString){
-        //handle special case xx>xxx, xx> xx ,xx >xx
-        //transform them to the xx > xx
-        //
 
-        //initialize var for front part and back part whether they exist
-        char *finalString = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));     
-        char *subString;
-        if(strchr(splitString, '<') == NULL){
-                //check whether can find >, if do not find return
-                return 0;
+void InverseRedirect(CommandAndArgument *singleCommand){
+
+        //initialize fd and file name
+        int fd;
+        char fileName[PATH_MAX_LEN];
+
+        //did not contain symbol <, return 
+        if(singleCommand->isInverseRedirect == 0){
+                return;
         }else{
-                //echo 123>file to echo 123 > file
-                subString = strtok(splitString, "<");
-                int flag = 0; //first loop flag
-                
-                while(subString != NULL){
-                        
-                        strcat(finalString, subString);
-                        if(flag == 0){
-                                strcat(finalString, " < ");
-                                flag = 1;
+
+                //find the argument of file name 
+                int indexOfRedirectSign;
+                for(int i = singleCommand->numOfArgument - 1; i > 0; i--){
+                        if(strcmp(singleCommand->argument[i], "<") == 0){
+                                indexOfRedirectSign = i;
                         }
-                        subString = strtok(NULL, "<");
                 }
+
+                //missing argument
+                if(indexOfRedirectSign - 1 < 0){
+                        return;
+                }
+
+                //missing file name
+                if(singleCommand->argument[indexOfRedirectSign - 1] == NULL){
+                        
+                        return;
+                }
+
+                //set file name
+                strcpy(fileName, singleCommand->argument[indexOfRedirectSign + 1]);
+                singleCommand->argument[indexOfRedirectSign] = NULL;
+                singleCommand->argument[indexOfRedirectSign + 1] = NULL;
                 
-                
-                strcpy(splitString, finalString);
-                return 1;
         }
 
-
-        
-        
-}
-
-
-//check whether exist redirection
-int RedirectionCommandHandler(char *splitString){
-        //handle special case xx>xxx, xx> xx ,xx >xx
-        //transform them to the xx > xx
-        //return 1 if find > else return 0
-
-        //initialize var for front part and back part whether they exist
-        char *finalString = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));     
-        char *subString;
-        if(strchr(splitString, '>') == NULL){
-                //check whether can find >, if do not find return
-                return 0;
+        //open file and read it into pipeline
+        fd = open(fileName, O_RDWR|O_CREAT);
+        if(fd != -1){
+                
+                dup2(fd, STDIN_FILENO);
+                close(fd);
         }else{
-                //echo 123>file to echo 123 > file
-                subString = strtok(splitString, ">");
-                int flag = 0; //first loop flag
-                
-
-                while(subString != NULL){
-                        
-                        strcat(finalString, subString);
-                        if(flag == 0){
-                                strcat(finalString, " > ");
-                                flag = 1;
-                        }
-                        subString = strtok(NULL, ">");
-                }
-                
-                strcpy(splitString, finalString);
-                return 1;
+                ErrorHandler(ERR_OPEN_FILE);
+                singleCommand->isError = 1;
+                singleCommand->isSuccess = 0;
         }
 
-        
 }
 
 
-int main(){
+void RedirectionOutput(CommandAndArgument *singleCommand){
+
+        //initialize fd and file name
+        int fd;
+        char fileName[PATH_MAX_LEN];
+
+        //did not contain symbol <, return 
+        if(singleCommand->isRedirect == 0){
+                return;
+        }else{
+                //find the argument of file name 
+                int indexOfRedirectSign;
+                for(int i = singleCommand->numOfArgument - 1; i > 0; i--){
+                        if(strcmp(singleCommand->argument[i], ">") == 0){
+                                indexOfRedirectSign = i;
+                        }
+                }
+
+                //missing 
+                if(singleCommand->argument[indexOfRedirectSign + 1] == NULL){
+                        //missing file name
+                        return;
+                }
+                //set file name
+                strcpy(fileName, singleCommand->argument[indexOfRedirectSign + 1]);
+                singleCommand->argument[indexOfRedirectSign] = NULL;
+                singleCommand->argument[indexOfRedirectSign + 1] = NULL;
+                
+        }
         
-        
-        ViewStart();
-        
+        //open file and read it into pipeline
+        fd = open(fileName, O_RDWR|O_CREAT);
+        if(fd != -1){
+                
+                dup2(fd, STDOUT_FILENO);
+                close(fd);
+        }else{
+                ErrorHandler(ERR_OPEN_FILE);
+                singleCommand->isError = 1;
+                singleCommand->isSuccess = 0;
+        }
 }
+
+
+
+
+int ErrorHandler(int errorType){
+
+        //check which error status number
+        switch(errorType){
+                case ERR_CMD_NOTFOUND:
+                        //can not open output file
+                        fprintf(stderr, 
+				"Error: command not found\n");
+                        
+                        break;
+                case ERR_CD_DIR:
+                        //can not cd
+                        fprintf(stderr, 
+				"Error: cannot cd into directory\n");
+                        
+                        break;
+                case ERR_OPEN_FILE:
+                        fprintf(stderr, 
+				"Error: cannot open output file\n");
+                        //invalid name
+                        break;
+                case ERR_MISS_COMMAND:
+                        fprintf(stderr, 
+				"Error: missing command\n");
+                        //missing command
+                        break;
+                case ERR_TOOMANY_ARG:
+                        fprintf(stderr, 
+				"Error: too many process arguments\n");
+                        //too much argument
+                        break;
+                case ERR_OUTPUT_FILE:
+                        fprintf(stderr, 
+				"Error: no output file\n");
+                        //missing output file
+                        break;
+                case ERR_MISLOCATE_REDIR:
+                        fprintf(stderr,
+                                "Error: mislocated output redirection\n");
+                        //mislocated output redirection
+                        break;
+
+                case ERR_STACK_EMPTY:
+                        fprintf(stderr, 
+				"Error: directory stack empty\n");
+
+                        
+                        break;
+                        
+                default:
+                        fprintf(stderr, 
+				"Error: unknown error\n");
+                        break;
+                        
+        }
+        fflush(stdout);
+        return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

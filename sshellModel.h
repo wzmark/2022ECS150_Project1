@@ -16,6 +16,18 @@
 #define PATH_MAX_NUM 32
 #define VARIABLE_MAX_NUM 64
 
+enum{
+        ERR_CMD_NOTFOUND,
+        ERR_CD_DIR,
+        ERR_OPEN_FILE,
+        ERR_MISS_COMMAND,
+        ERR_TOOMANY_ARG,
+        ERR_OUTPUT_FILE,
+        ERR_MISLOCATE_REDIR,
+        ERR_STACK_EMPTY
+
+};
+
 
 
 //Store data of command, argument, and flags
