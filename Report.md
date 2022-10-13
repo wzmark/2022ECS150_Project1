@@ -1,4 +1,4 @@
-# project 2 report 
+# project 1 report 
 ## Simple Shell
 ### Summary
 We accomplish this project by developing different phases in order. 
