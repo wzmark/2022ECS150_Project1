@@ -518,8 +518,16 @@ void ExecuteCommand(CommandAndArgument *singleCommand){
                                 singleCommand->argument[i] = NULL;
                         }  
                 }
+        }else if(singleCommand->numOfArgument == 0){
+                singleCommand->argument[0] = (char*)malloc(
+                                        ARGUMENT_MAX_LEN  * sizeof(char));
+                singleCommand->argument[1] = (char*)malloc(
+                                        ARGUMENT_MAX_LEN  * sizeof(char));
+                strcpy(singleCommand->argument[0], singleCommand->command);
+                singleCommand->argument[1] = NULL;
+
         }
-        
+        //printf("%s %s\n", singleCommand->command, singleCommand->argument[0]);
         char *tempCommand = (char*)malloc(ARGUMENT_MAX_LEN  * sizeof(char));
         strcpy(tempCommand, "");
         

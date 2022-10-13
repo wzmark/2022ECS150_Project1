@@ -16,6 +16,8 @@
 #define PATH_MAX_NUM 32
 #define VARIABLE_MAX_NUM 64
 
+
+
 //Store data of command, argument, and flags
 typedef struct{
         char *command; //store command
