@@ -30,7 +30,8 @@ void ViewStart(){
         printf("sshell@ucd$ ");
        
         while(fgets(userInput, CMD_MAX_LEN, stdin) != NULL){
-                printf("%s", userInput);
+                if (!isatty(STDIN_FILENO))
+                        printf("%s", userInput);
                 fflush(stdout);
                 //find postion of \n and set it to 0 for deleting 
                 userInput[strcspn(userInput, "\n")] = 0;
